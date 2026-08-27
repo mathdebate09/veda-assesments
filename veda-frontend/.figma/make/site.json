@@ -1,0 +1,10 @@
+{
+  "description": "Provides a secure login interface for users to access the application, ensuring streamlined authentication without registration functionality.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
