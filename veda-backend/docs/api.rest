@@ -1,0 +1,176 @@
+### VedaAI Exam Assessment Backend API Documentation & REST Client
+
+@baseUrl = http://localhost:3000/api/v1
+@contentType = application/json
+
+# Paste your JWT token here after login/registration (or use dynamic variable from response)
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YTkwMmExMzUwNzNjYjkzNmNkZDA1MWEiLCJlbWFpbCI6Im1hZGh1ci5yYXN0b2dpQGRwcy5lZHUiLCJyb2xlIjoidGVhY2hlciIsImluc3RpdHV0ZUlkIjoiNmE5MDJhMTM1MDczY2I5MzZjZGQwNTE5IiwiaWF0IjoxNzg3ODMyODUxLCJleHAiOjE3ODg0Mzc2NTF9.t64yAd55NtyNZLn84MKaoi_ytWa8aNp5YetVayf2dWo
+
+@classroomId = 64f1a2b3c4d5e6f7a8b9c0d1
+@examId = 64f1a2b3c4d5e6f7a8b9c0d2
+@answerSheetId = 64f1a2b3c4d5e6f7a8b9c0d3
+@gradeId = 64f1a2b3c4d5e6f7a8b9c0d4
+@regionId = 64f1a2b3c4d5e6f7a8b9c0d5
+@questionId = 64f1a2b3c4d5e6f7a8b9c0d6
+
+###############################################################################
+### 1. Register Teacher + Institute
+###############################################################################
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Madhur Hastogi",
+  "email": "madhur.hastogi@dps.edu",
+  "password": "Password@123",
+  "instituteName": "Delhi Public School",
+  "instituteLocation": "Bokaro Steel City",
+  "instituteLogoUrl": "https://ik.imagekit.io/jayowiee/assessments/veda-ai/dps.png?updatedAt=1787832754753"
+}
+
+###############################################################################
+### 2. Login
+###############################################################################
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "alan.turing@vedaschool.edu",
+  "password": "Password@123"
+}
+
+###############################################################################
+### 3. Create Exam (Draft)
+###############################################################################
+# Note: classroomId is optional. Uploading the question paper will auto-create or find the classroom.
+# @name createExam
+POST {{baseUrl}}/exams
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Class 10 Biology Midterm Exam",
+  "subject": "Biology",
+  "totalMarks": 50
+}
+
+###############################################################################
+### 4. Get All Exams for Authenticated Teacher
+###############################################################################
+GET {{baseUrl}}/exams
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 5. Get Exam By ID (with populated questions and classroom)
+###############################################################################
+GET {{baseUrl}}/exams/{{examId}}
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 6. Upload Question Paper & Auto-Extract Metadata & Questions
+###############################################################################
+# Multipart file upload to Azure Blob Storage, OCR parsing, header extraction (auto-creates classroom), and question extraction.
+# IMPORTANT: Edit the local file path './sample_question_paper.pdf' to point to your actual PDF/image file.
+POST {{baseUrl}}/exams/{{examId}}/question-paper
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryExamQPaper
+
+------WebKitFormBoundaryExamQPaper
+Content-Disposition: form-data; name="file"; filename="sample_question_paper.pdf"
+Content-Type: application/pdf
+
+< ./sample_question_paper.pdf
+------WebKitFormBoundaryExamQPaper--
+
+###############################################################################
+### 7. Get All Classrooms for Teacher (with student and exam counts)
+###############################################################################
+GET {{baseUrl}}/classrooms
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 8. Get Classroom By ID (with populated students and exams)
+###############################################################################
+GET {{baseUrl}}/classrooms/{{classroomId}}
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 9. Get Students in Classroom
+###############################################################################
+GET {{baseUrl}}/classrooms/{{classroomId}}/students
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 10. Get Exams for Classroom
+###############################################################################
+GET {{baseUrl}}/classrooms/{{classroomId}}/exams
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 11. Upload Student Answer Sheet & Auto-Create Student
+###############################################################################
+# Multipart upload:
+# - file: student's handwritten answer sheet (PDF or image)
+# - studentName: full name of the student (auto-creates/finds student in classroom)
+# - studentRollNo (optional): roll number of the student
+# IMPORTANT: Edit the local file path './sample_answer_sheet.pdf' to point to your actual file.
+# @name uploadAnswerSheet
+POST {{baseUrl}}/exams/{{examId}}/answer-sheets
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAnswerSheet
+
+------WebKitFormBoundaryAnswerSheet
+Content-Disposition: form-data; name="studentName"
+
+John Doe
+------WebKitFormBoundaryAnswerSheet
+Content-Disposition: form-data; name="studentRollNo"
+
+10B-01
+------WebKitFormBoundaryAnswerSheet
+Content-Disposition: form-data; name="file"; filename="sample_answer_sheet.pdf"
+Content-Type: application/pdf
+
+< ./sample_answer_sheet.pdf
+------WebKitFormBoundaryAnswerSheet--
+
+###############################################################################
+### 12. Grade Answer Sheet (AI Evaluation & Summary)
+###############################################################################
+# Evaluates each matched AnswerRegion using DeepSeek V4 flash, marks unattempted questions as 0, and generates an exam summary report.
+# @name gradeSheet
+POST {{baseUrl}}/exams/{{examId}}/answer-sheets/{{answerSheetId}}/grade
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 13. Get Complete Answer Sheet Details (Frontend Split-View Payload)
+###############################################################################
+# Main payload returning answerSheet, pageImages[], questions[], answerRegions[] with bounding box segments, questionGrades[], and examSummary.
+GET {{baseUrl}}/exams/{{examId}}/answer-sheets/{{answerSheetId}}
+Authorization: Bearer {{token}}
+
+###############################################################################
+### 14. Teacher Override Question Grade
+###############################################################################
+# Updates teacherOverride and recalculates the answerSheet totalScore and percentage.
+PATCH {{baseUrl}}/exams/{{examId}}/answer-sheets/{{answerSheetId}}/grades/{{gradeId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "marksAwarded": 4.5
+}
+
+###############################################################################
+### 15. Manually Assign Unmatched Answer Region to a Question
+###############################################################################
+# Links an unmatched AnswerRegion to a specific Question ID and sets isUnmatched to false.
+PATCH {{baseUrl}}/exams/{{examId}}/answer-sheets/{{answerSheetId}}/regions/{{regionId}}/assign
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "questionId": "64f1a2b3c4d5e6f7a8b9c0d6"
+}
