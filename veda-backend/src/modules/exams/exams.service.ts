@@ -11,6 +11,7 @@ import { ExamStatus } from '../../schemas/exam.schema';
 import { StorageService } from '../storage/storage.service';
 import { ExtractionService } from '../extraction/extraction.service';
 import { QuestionsService } from '../questions/questions.service';
+import { sortPageFiles } from '../../common/utils/document.helpers';
 
 @Injectable()
 export class ExamsService {
@@ -89,14 +90,7 @@ export class ExamsService {
     }
 
     // Sort page files if they contain page numbers in their names
-    const files = [...rawFiles].sort((a, b) => {
-      const matchA = a.originalname.match(/page_(\d+)/i);
-      const matchB = b.originalname.match(/page_(\d+)/i);
-      if (matchA && matchB) {
-        return parseInt(matchA[1], 10) - parseInt(matchB[1], 10);
-      }
-      return 0;
-    });
+    const files = sortPageFiles(rawFiles);
 
     let pageBuffers: Buffer[] = [];
     let originalDocUrl: string | undefined;
@@ -196,4 +190,3 @@ export class ExamsService {
     ];
   }
 }
-

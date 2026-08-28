@@ -1,3 +1,5 @@
+import { getAiConfig } from './ai.config';
+
 export default () => ({
   port: parseInt(process.env.PORT || '3000', 10),
   mongoUri: process.env.MONGODB_URI,
@@ -20,4 +22,5 @@ export default () => ({
     apiKey: process.env.DEEPSEEK_API_KEY,
     baseURL: 'https://api.deepseek.com',
   },
+  ai: getAiConfig(),
 });

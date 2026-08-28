@@ -5,6 +5,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, { toFile } from 'openai';
+import { VisionConfig } from '../../config/ai.config';
+import { cleanJsonResponse } from '../../common/utils/ai.helpers';
+import { getImageMimeType, isPdfBuffer } from '../../common/utils/document.helpers';
 import { validateBoundingBox } from './extraction.helpers';
 
 export interface ExtractedQuestion {
@@ -71,9 +74,7 @@ export interface ExtractAnswersResult {
 export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
   private readonly client: OpenAI;
-
-  /** Vision model used for all image extraction tasks */
-  private readonly VISION_MODEL = 'deepseek-v4-flash-vision-exp';
+  private readonly visionConfig: VisionConfig;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey =
@@ -84,55 +85,30 @@ export class ExtractionService {
       this.configService.get<string>('deepseek.baseURL') ||
       'https://api.deepseek.com';
 
+    this.visionConfig = this.configService.get<VisionConfig>('ai.vision') || {
+      model: process.env.DEEPSEEK_VISION_MODEL || 'deepseek-v4-flash-vision-exp',
+      questionMaxTokens: parseInt(process.env.VISION_QUESTION_MAX_TOKENS || '15000', 10),
+      answerMaxTokens: parseInt(process.env.VISION_ANSWER_MAX_TOKENS || '50000', 10),
+      temperature: parseFloat(process.env.VISION_TEMPERATURE || '0.1'),
+    };
+
     this.client = new OpenAI({ apiKey, baseURL });
-    this.logger.log(`ExtractionService initialised — model: ${this.VISION_MODEL}`);
+    this.logger.log(`ExtractionService initialised — model: ${this.visionConfig.model}`);
   }
 
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private cleanJson(raw: string): string {
-    let s = raw.trim();
-    if (s.startsWith('```')) {
-      s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-    }
-    s = s.trim();
-    const match = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    return match ? match[0].trim() : s;
-  }
-
-  private getImageMimeType(buf: Buffer): string {
-    if (buf && buf.length >= 4) {
-      if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47)
-        return 'image/png';
-      if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff)
-        return 'image/jpeg';
-      if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38)
-        return 'image/gif';
-      if (
-        buf.length >= 12 &&
-        buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
-        buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
-      ) return 'image/webp';
-      if (buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) {
-        throw new BadRequestException(
-          'Received an unrasterised PDF buffer. Convert document pages to PNG/JPEG/WebP before extraction.',
-        );
-      }
-    }
-    return 'image/png';
-  }
-
   private bufferToDataUrl(buf: Buffer): string {
-    const mime = this.getImageMimeType(buf);
+    const mime = getImageMimeType(buf);
     return `data:${mime};base64,${buf.toString('base64')}`;
   }
 
   /**
    * Build DeepSeek Vision content blocks from image sources.
-   * Buffers → DeepSeek Files API (file_id), with inline base64 fallback.
-   * URLs   → image_url block directly.
+   * Buffers -> DeepSeek Files API (file_id), with inline base64 fallback.
+   * URLs -> image_url block directly.
    */
   private async buildImageBlocks(
     imageSources: Array<string | Buffer>,
@@ -143,8 +119,14 @@ export class ExtractionService {
       const src = imageSources[i];
 
       if (Buffer.isBuffer(src)) {
+        if (isPdfBuffer(src)) {
+          throw new BadRequestException(
+            'Received an unrasterised PDF buffer. Convert document pages to PNG/JPEG/WebP before extraction.',
+          );
+        }
+
         try {
-          const mime = this.getImageMimeType(src);
+          const mime = getImageMimeType(src);
           const ext = mime === 'image/jpeg' ? 'jpg' : mime === 'image/webp' ? 'webp' : 'png';
           const fileObj = await toFile(src, `page_${i + 1}.${ext}`, { type: mime });
           const uploaded = await this.client.files.create({
@@ -186,7 +168,7 @@ export class ExtractionService {
     maxTokens: number,
   ): Promise<string> {
     this.logger.log(
-      `DeepSeek Vision (${this.VISION_MODEL}) — ${imageSources.length} page(s), max_tokens=${maxTokens}`,
+      `DeepSeek Vision (${this.visionConfig.model}) — ${imageSources.length} page(s), max_tokens=${maxTokens}`,
     );
 
     const imageBlocks = await this.buildImageBlocks(imageSources);
@@ -195,7 +177,7 @@ export class ExtractionService {
     let rawResponse: any;
     try {
       const response = await this.client.chat.completions.create({
-        model: this.VISION_MODEL,
+        model: this.visionConfig.model,
         messages: [
           {
             role: 'user',
@@ -205,7 +187,7 @@ export class ExtractionService {
             ],
           },
         ],
-        temperature: 0.1,
+        temperature: this.visionConfig.temperature,
         max_tokens: maxTokens,
       });
       rawResponse = response;
@@ -235,11 +217,6 @@ export class ExtractionService {
 
   /**
    * Extract all questions from a question paper image set.
-   * Uses 15 000 max_tokens (question text is compact structured data).
-   */
-  /**
-   * Extract all questions from a question paper image set.
-   * Uses 15 000 max_tokens (question text is compact structured data).
    * Returns:
    *  - header: document metadata (subject, class, maxMarks, duration)
    *  - questionDistribution: ordered list of question keys & marks distribution
@@ -286,11 +263,15 @@ Rules:
 - Preserve the original printed order of questions
 - Include ALL questions and ALL labelled sub-parts as separate items`;
 
-    const rawContent = await this.runVision(systemPrompt, imageSources, 15000);
+    const rawContent = await this.runVision(
+      systemPrompt,
+      imageSources,
+      this.visionConfig.questionMaxTokens,
+    );
 
     let parsed: any;
     try {
-      parsed = JSON.parse(this.cleanJson(rawContent));
+      parsed = JSON.parse(cleanJsonResponse(rawContent));
     } catch (err: any) {
       this.logger.error(
         `Failed to parse question extraction JSON: ${err.message}. Raw (first 500): ${rawContent.slice(0, 500)}`,
@@ -349,7 +330,6 @@ Rules:
 
   /**
    * Extract answers from a student answer sheet image set.
-   * Uses 50 000 max_tokens (handwritten OCR + bounding boxes across many pages).
    *
    * Returns:
    *  - answers: Record<string, ExtractedAnswer> (dictionary of verified student answers keyed by questionRef)
@@ -409,7 +389,11 @@ Rules:
 
     let rawContent: string;
     try {
-      rawContent = await this.runVision(systemPrompt, imageSources, 50000);
+      rawContent = await this.runVision(
+        systemPrompt,
+        imageSources,
+        this.visionConfig.answerMaxTokens,
+      );
     } catch (error: any) {
       this.logger.error(`Answer extraction failed: ${error.message}`, error.stack);
       return { answers: {}, extras: [], answersList: [] };
@@ -422,7 +406,7 @@ Rules:
 
     let parsed: any;
     try {
-      parsed = JSON.parse(this.cleanJson(rawContent));
+      parsed = JSON.parse(cleanJsonResponse(rawContent));
     } catch (err: any) {
       this.logger.error(
         `Failed to parse answer extraction JSON: ${err.message}. Raw (first 500): ${rawContent.slice(0, 500)}`,

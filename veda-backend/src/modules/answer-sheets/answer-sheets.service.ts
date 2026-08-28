@@ -12,12 +12,13 @@ import { StorageService } from '../storage/storage.service';
 import {
   ExtractionService,
   ExtractedAnswer,
+  ExtraAnswerData,
 } from '../extraction/extraction.service';
-import { GradingService } from '../grading/grading.service';
+import { GradingService, SingleGradeItem } from '../grading/grading.service';
 import { QuestionsService } from '../questions/questions.service';
-import { matchQuestionRef } from '../extraction/extraction.helpers';
 import { ExamsRepository } from '../exams/exams.repository';
 import { StudentsService } from '../students/students.service';
+import { sortPageFiles } from '../../common/utils/document.helpers';
 
 @Injectable()
 export class AnswerSheetsService {
@@ -32,6 +33,80 @@ export class AnswerSheetsService {
     private readonly gradingService: GradingService,
     private readonly studentsService: StudentsService,
   ) {}
+
+  // ---------------------------------------------------------------------------
+  // Helper methods
+  // ---------------------------------------------------------------------------
+
+  private buildQuestionsList(exam: any, legacyQuestions: any[] = []) {
+    if (exam?.questionDistribution && exam.questionDistribution.length > 0) {
+      return exam.questionDistribution.map((qd: any) => {
+        const detail = exam.questions?.[qd.displayId];
+        const legacyMatch = legacyQuestions.find((lq) => lq.displayId === qd.displayId);
+        return {
+          _id: legacyMatch ? legacyMatch._id.toString() : qd.displayId,
+          number: qd.number,
+          subPart: qd.subPart,
+          displayId: qd.displayId,
+          text: detail?.text || `Question ${qd.displayId}`,
+          maxMarks: qd.maxMarks || 5,
+          orderIndex: qd.orderIndex,
+        };
+      });
+    }
+    return legacyQuestions.map((q) => ({
+      _id: q._id?.toString(),
+      number: q.number,
+      subPart: q.subPart,
+      displayId: q.displayId,
+      text: q.text,
+      maxMarks: q.maxMarks || 5,
+      orderIndex: q.orderIndex ?? 0,
+    }));
+  }
+
+  private buildLegacyRegionsData(
+    sheetId: Types.ObjectId,
+    answers: Record<string, ExtractedAnswer>,
+    extras: ExtraAnswerData[],
+    legacyQuestions: any[],
+  ) {
+    const legacyQMap = new Map(
+      legacyQuestions.map((q) => [q.displayId.toLowerCase(), q]),
+    );
+    const regionsData: any[] = [];
+
+    for (const [qRef, ans] of Object.entries(answers)) {
+      const matchedQ = legacyQMap.get(qRef.toLowerCase());
+      regionsData.push({
+        answerSheet: sheetId,
+        question: matchedQ ? matchedQ._id : undefined,
+        questionRef: qRef,
+        extractedText: ans.text,
+        isUnmatched: false,
+        segments: ans.segments,
+        createdAt: new Date(),
+      });
+    }
+
+    for (const extra of extras) {
+      regionsData.push({
+        answerSheet: sheetId,
+        question: undefined,
+        questionRef: extra.questionRef,
+        extractedText: extra.text,
+        isUnmatched: true,
+        segments: extra.segments,
+        createdAt: new Date(),
+      });
+    }
+
+    return regionsData;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
 
   async createAnswerSheet(
     examId: string,
@@ -69,15 +144,8 @@ export class AnswerSheetsService {
     // 2. Link exam to student
     await this.studentsService.addExam(studentId, examId);
 
-    // Sort page files if they contain page numbers in their names
-    const files = [...rawFiles].sort((a, b) => {
-      const matchA = a.originalname.match(/page_(\d+)/i);
-      const matchB = b.originalname.match(/page_(\d+)/i);
-      if (matchA && matchB) {
-        return parseInt(matchA[1], 10) - parseInt(matchB[1], 10);
-      }
-      return 0;
-    });
+    // Sort page files in ascending order if indexed
+    const files = sortPageFiles(rawFiles);
 
     let pageBuffers: Buffer[] = [];
     let originalDocUrl: string | undefined;
@@ -104,7 +172,6 @@ export class AnswerSheetsService {
         files[0].mimetype || 'application/pdf',
       );
     } else {
-      // Stream/array of PNG page images from client side
       pageBuffers = files.map((f) => f.buffer);
     }
 
@@ -127,30 +194,12 @@ export class AnswerSheetsService {
     const fileUrl = originalDocUrl || pageImages[0] || '';
 
     // 4. Fetch exam's question distribution and questions map
-    const questionDistribution = exam.questionDistribution || [];
-    const questionsMap = exam.questions || {};
-
-    const questionsList =
-      questionDistribution.length > 0
-        ? questionDistribution.map((qd) => ({
-            displayId: qd.displayId,
-            number: qd.number,
-            subPart: qd.subPart,
-            text: questionsMap[qd.displayId]?.text || `Question ${qd.displayId}`,
-            maxMarks: qd.maxMarks,
-          }))
-        : (await this.questionsService.getQuestionsByExam(examId)).map((q) => ({
-            displayId: q.displayId,
-            number: q.number,
-            subPart: q.subPart,
-            text: q.text,
-            maxMarks: q.maxMarks,
-          }));
+    const legacyQuestions = await this.questionsService.getQuestionsByExam(examId);
+    const questionsList = this.buildQuestionsList(exam, legacyQuestions);
 
     // 5. Extract answer blocks using DeepSeek Vision against the question distribution
     let extractedAnswersMap: Record<string, ExtractedAnswer> = {};
-    let extractedExtras: any[] = [];
-    let extractedList: ExtractedAnswer[] = [];
+    let extractedExtras: ExtraAnswerData[] = [];
 
     try {
       const extractionResult =
@@ -160,14 +209,14 @@ export class AnswerSheetsService {
         );
       extractedAnswersMap = extractionResult.answers;
       extractedExtras = extractionResult.extras;
-      extractedList = extractionResult.answersList;
     } catch (extractionError: any) {
       this.logger.warn(
         `Automated answer extraction skipped/failed: ${extractionError.message}. Uploading answer sheet so it can still be viewed and graded.`,
       );
     }
 
-    const hasExtracted = Object.keys(extractedAnswersMap).length > 0 || extractedExtras.length > 0;
+    const hasExtracted =
+      Object.keys(extractedAnswersMap).length > 0 || extractedExtras.length > 0;
 
     // 6. Create AnswerSheet document with unified answers & extras
     const answerSheet = await this.answerSheetsRepository.createSheet({
@@ -185,34 +234,12 @@ export class AnswerSheetsService {
     });
 
     // 7. Generate legacy AnswerRegions for backwards-compatible API consumers
-    const legacyQuestions = await this.questionsService.getQuestionsByExam(examId);
-    const legacyQMap = new Map(legacyQuestions.map((q) => [q.displayId.toLowerCase(), q]));
-
-    const regionsData: any[] = [];
-    for (const [qRef, ans] of Object.entries(extractedAnswersMap)) {
-      const matchedQ = legacyQMap.get(qRef.toLowerCase());
-      regionsData.push({
-        answerSheet: answerSheet._id as any,
-        question: matchedQ ? matchedQ._id : undefined,
-        questionRef: qRef,
-        extractedText: ans.text,
-        isUnmatched: false,
-        segments: ans.segments,
-        createdAt: new Date(),
-      });
-    }
-
-    for (const extra of extractedExtras) {
-      regionsData.push({
-        answerSheet: answerSheet._id as any,
-        question: undefined,
-        questionRef: extra.questionRef,
-        extractedText: extra.text,
-        isUnmatched: true,
-        segments: extra.segments,
-        createdAt: new Date(),
-      });
-    }
+    const regionsData = this.buildLegacyRegionsData(
+      answerSheet._id as Types.ObjectId,
+      extractedAnswersMap,
+      extractedExtras,
+      legacyQuestions,
+    );
 
     const answerRegions =
       regionsData.length > 0
@@ -250,29 +277,20 @@ export class AnswerSheetsService {
       throw new NotFoundException(`Exam with ID ${examId} not found.`);
     }
 
-    // Build question map
+    // Build questions map
+    const legacyQuestions = await this.questionsService.getQuestionsByExam(examId);
+    const questionsList = this.buildQuestionsList(exam, legacyQuestions);
     const questionsMap: Record<
       string,
       { displayId: string; text: string; maxMarks?: number | null }
     > = {};
-    if (exam.questionDistribution && exam.questionDistribution.length > 0) {
-      for (const qd of exam.questionDistribution) {
-        const qDetail = exam.questions?.[qd.displayId];
-        questionsMap[qd.displayId] = {
-          displayId: qd.displayId,
-          text: qDetail?.text || `Question ${qd.displayId}`,
-          maxMarks: qd.maxMarks ?? null,
-        };
-      }
-    } else {
-      const legacyQuestions = await this.questionsService.getQuestionsByExam(examId);
-      for (const q of legacyQuestions) {
-        questionsMap[q.displayId] = {
-          displayId: q.displayId,
-          text: q.text,
-          maxMarks: q.maxMarks ?? null,
-        };
-      }
+
+    for (const q of questionsList) {
+      questionsMap[q.displayId] = {
+        displayId: q.displayId,
+        text: q.text,
+        maxMarks: q.maxMarks,
+      };
     }
 
     const answersMap: Record<string, { text: string }> = {};
@@ -309,10 +327,11 @@ export class AnswerSheetsService {
 
     // Also update/sync legacy QuestionGrade & ExamSummary documents for backwards compatibility
     await this.answerSheetsRepository.deleteGradesBySheetId(sheetId);
-    const legacyQuestions = await this.questionsService.getQuestionsByExam(examId);
     const legacyQMap = new Map(legacyQuestions.map((q) => [q.displayId.toLowerCase(), q]));
     const regions = await this.answerSheetsRepository.findRegionsBySheetId(sheetId);
-    const regionMap = new Map(regions.filter((r) => r.questionRef).map((r) => [r.questionRef.toLowerCase(), r]));
+    const regionMap = new Map(
+      regions.filter((r) => r.questionRef).map((r) => [r.questionRef.toLowerCase(), r]),
+    );
 
     const gradesToCreate: any[] = [];
     for (const [qRef, gradeItem] of Object.entries(gradingResult.grades)) {
@@ -376,23 +395,7 @@ export class AnswerSheetsService {
         this.answerSheetsRepository.findSummaryBySheetId(sheetId),
       ]);
 
-    // Build unified questions list from Exam
-    const questionsList =
-      exam?.questionDistribution && exam.questionDistribution.length > 0
-        ? exam.questionDistribution.map((qd) => {
-            const detail = exam.questions?.[qd.displayId];
-            const legacyMatch = legacyQuestions.find((lq) => lq.displayId === qd.displayId);
-            return {
-              _id: legacyMatch ? legacyMatch._id.toString() : qd.displayId,
-              number: qd.number,
-              subPart: qd.subPart,
-              displayId: qd.displayId,
-              text: detail?.text || `Question ${qd.displayId}`,
-              maxMarks: qd.maxMarks || 5,
-              orderIndex: qd.orderIndex,
-            };
-          })
-        : legacyQuestions;
+    const questionsList = this.buildQuestionsList(exam, legacyQuestions);
 
     // Convert sheet.answers & extras to unified AnswerRegions format
     const answerRegions: any[] = [];

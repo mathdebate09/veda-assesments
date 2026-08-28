@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { EvaluationConfig, GradingConfig } from '../../config/ai.config';
+import { cleanJsonResponse } from '../../common/utils/ai.helpers';
 
 export interface GradeAnswerResult {
   marksAwarded: number;
@@ -14,10 +16,38 @@ export interface ExamSummaryResult {
   improvements: string[];
 }
 
+export interface SingleGradeItem {
+  marksAwarded: number;
+  maxMarks: number;
+  isCorrect: boolean;
+  aiFeedback: string;
+  teacherOverride: number | null;
+}
+
+export interface ExamSummaryData {
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  overallFeedback: string;
+  strengths: string[];
+  improvements: string[];
+}
+
+export interface GradeAllExamAnswersResult {
+  grades: Record<string, SingleGradeItem>;
+  summary: ExamSummaryData;
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  gradedAt: Date;
+}
+
 @Injectable()
 export class GradingService {
   private readonly logger = new Logger(GradingService.name);
-  private client: OpenAI;
+  private readonly client: OpenAI;
+  private readonly gradingConfig: GradingConfig;
+  private readonly evalConfig: EvaluationConfig;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey =
@@ -28,24 +58,22 @@ export class GradingService {
       this.configService.get<string>('deepseek.baseURL') ||
       'https://api.deepseek.com';
 
+    this.gradingConfig = this.configService.get<GradingConfig>('ai.grading') || {
+      model: process.env.DEEPSEEK_GRADING_MODEL || 'deepseek-v4-flash',
+      maxTokens: parseInt(process.env.GRADING_MAX_TOKENS || '50000', 10),
+      temperature: parseFloat(process.env.GRADING_TEMPERATURE || '0.1'),
+    };
+
+    this.evalConfig = this.configService.get<EvaluationConfig>('ai.evaluation') || {
+      model: process.env.DEEPSEEK_EVAL_MODEL || 'deepseek-v4-flash',
+      maxTokens: parseInt(process.env.SUMMARY_MAX_TOKENS || '50000', 10),
+      temperature: parseFloat(process.env.SUMMARY_TEMPERATURE || '0.3'),
+    };
+
     this.client = new OpenAI({
       apiKey,
       baseURL,
     });
-  }
-
-  private cleanJsonString(raw: string): string {
-    let clean = raw.trim();
-    // Remove markdown code fences if present (```json ... ``` or ``` ...)
-    if (clean.startsWith('```')) {
-      clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-    }
-    clean = clean.trim();
-    const match = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    if (match) {
-      return match[0].trim();
-    }
-    return clean;
   }
 
   async gradeAnswer(
@@ -83,17 +111,17 @@ Maximum Marks: ${maxMarks}
 Student Answer: ${studentAnswer}`;
 
       const response = await this.client.chat.completions.create({
-        model: 'deepseek-v4-flash',
+        model: this.gradingConfig.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 50000,
-        temperature: 0.1,
+        max_tokens: this.gradingConfig.maxTokens,
+        temperature: this.gradingConfig.temperature,
       });
 
       const rawContent = response.choices[0]?.message?.content || '';
-      const cleaned = this.cleanJsonString(rawContent);
+      const cleaned = cleanJsonResponse(rawContent);
 
       try {
         const parsed = JSON.parse(cleaned);
@@ -120,13 +148,13 @@ Student Answer: ${studentAnswer}`;
           isCorrect,
           aiFeedback,
         };
-      } catch (parseError) {
+      } catch (parseError: any) {
         this.logger.error(
           `Failed to parse DeepSeek grade response: ${parseError.message}. Raw: ${rawContent}`,
         );
         return fallback;
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `DeepSeek grading API error: ${error.message}`,
         error.stack,
@@ -172,17 +200,17 @@ ${grades
   .join('\n')}`;
 
       const response = await this.client.chat.completions.create({
-        model: 'deepseek-v4-flash',
+        model: this.evalConfig.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 50000,
-        temperature: 0.3,
+        max_tokens: this.evalConfig.maxTokens,
+        temperature: this.evalConfig.temperature,
       });
 
       const rawContent = response.choices[0]?.message?.content || '';
-      const cleaned = this.cleanJsonString(rawContent);
+      const cleaned = cleanJsonResponse(rawContent);
 
       try {
         const parsed = JSON.parse(cleaned);
@@ -209,13 +237,13 @@ ${grades
           strengths,
           improvements,
         };
-      } catch (parseError) {
+      } catch (parseError: any) {
         this.logger.error(
           `Failed to parse DeepSeek summary response: ${parseError.message}. Raw: ${rawContent}`,
         );
         return fallback;
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `DeepSeek summary generation API error: ${error.message}`,
         error.stack,
@@ -231,15 +259,8 @@ ${grades
   async gradeAllExamAnswers(
     questions: Record<string, { displayId?: string; text: string; maxMarks?: number | null }>,
     answers: Record<string, { text: string }>,
-  ): Promise<{
-    grades: Record<string, { marksAwarded: number; maxMarks: number; isCorrect: boolean; aiFeedback: string; teacherOverride: number | null }>;
-    summary: { totalScore: number; maxScore: number; percentage: number; overallFeedback: string; strengths: string[]; improvements: string[] };
-    totalScore: number;
-    maxScore: number;
-    percentage: number;
-    gradedAt: Date;
-  }> {
-    const grades: Record<string, { marksAwarded: number; maxMarks: number; isCorrect: boolean; aiFeedback: string; teacherOverride: number | null }> = {};
+  ): Promise<GradeAllExamAnswersResult> {
+    const grades: Record<string, SingleGradeItem> = {};
     const summaryInput: Array<{ questionText: string; marksAwarded: number; maxMarks: number; aiFeedback: string }> = [];
 
     let totalScore = 0;
@@ -251,7 +272,9 @@ ${grades
       maxScore += maxMarks;
 
       const ans = answers[displayId] || answers[key];
-      if (ans && ans.text && ans.text.trim()) {
+      const hasAnswer = Boolean(ans && ans.text && ans.text.trim());
+
+      if (hasAnswer) {
         const gradeRes = await this.gradeAnswer(
           { text: q.text, maxMarks },
           ans.text.trim(),
@@ -292,7 +315,7 @@ ${grades
 
     const summaryRes = await this.generateSummary(summaryInput);
 
-    const summary = {
+    const summary: ExamSummaryData = {
       totalScore,
       maxScore,
       percentage,
