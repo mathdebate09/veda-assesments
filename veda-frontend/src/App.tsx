@@ -7,9 +7,11 @@ import ClassroomsPage from "@/pages/ClassroomsPage";
 import ClassroomDetailPage from "@/pages/ClassroomDetailPage";
 import LoadingPage from "@/pages/LoadingPage";
 import MappingPage from "@/pages/MappingPage";
+import { SidebarProvider } from "@/context/SidebarContext";
 
 export default function App() {
   return (
+    <SidebarProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -32,5 +34,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </SidebarProvider>
   );
 }

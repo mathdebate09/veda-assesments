@@ -11,8 +11,11 @@ import {
   type Grade,
   type AnswerRegion,
 } from "@/lib/api";
+import Sidebar, { HamburgerButton } from "@/components/Sidebar";
+import { useSidebar } from "@/context/SidebarContext";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function markColor(grade?: Grade): string {
   if (!grade) return "bg-[#e8e8e8] text-[#6b6b6b]";
@@ -26,7 +29,7 @@ function pct(val: number, max: number) {
   return Math.round((val / max) * 100);
 }
 
-// ── Canvas highlight ──────────────────────────────────────────────────────────
+// â”€â”€ Canvas highlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function drawHighlight(
   canvas: HTMLCanvasElement,
@@ -78,7 +81,14 @@ function drawHighlight(
   }
 }
 
-// ── Page image with canvas overlay ───────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PageImageProps {
+  src: string;
+  pageIndex: number;
+  regions: AnswerRegion[];
+  grade?: Grade;
+}
 
 function PageImage({ src, pageIndex, regions, grade }: PageImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
@@ -134,7 +144,7 @@ function PageImage({ src, pageIndex, regions, grade }: PageImageProps) {
   );
 }
 
-// ── Question card ─────────────────────────────────────────────────────────────
+// â”€â”€ Question card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface QuestionCardProps {
   question: Question;
@@ -211,7 +221,7 @@ function QuestionCard({
 
         {/* Marks badge */}
         <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${colorClass}`}>
-          {grade ? `${grade.teacherOverride ?? grade.marksAwarded}/${grade.maxMarks}` : `—/${question.maxMarks}`}
+          {grade ? `${grade.teacherOverride ?? grade.marksAwarded}/${grade.maxMarks}` : `â€”/${question.maxMarks}`}
         </span>
 
         {/* Expand chevron */}
@@ -261,7 +271,7 @@ function QuestionCard({
                 className="w-16 h-7 px-2 text-[13px] border border-[#e0e0e0] rounded-[6px] outline-none focus:border-[#FF5623] transition-colors"
               />
               <span className="text-[12px] text-[#9b9b9b]">/ {grade.maxMarks}</span>
-              {savingGrade && <span className="text-[11px] text-[#9b9b9b]">Saving…</span>}
+              {savingGrade && <span className="text-[11px] text-[#9b9b9b]">Savingâ€¦</span>}
             </div>
           )}
         </div>
@@ -298,9 +308,9 @@ function QuestionCard({
               }
             }}
           >
-            <option value="">Select unmatched region…</option>
+            <option value="">Select unmatched regionâ€¦</option>
             {unmatchedRegions.map((r) => (
-              <option key={r._id} value={r._id}>{r.extractedText.slice(0, 60)}…</option>
+              <option key={r._id} value={r._id}>{r.extractedText.slice(0, 60)}â€¦</option>
             ))}
           </select>
         </div>
@@ -309,7 +319,7 @@ function QuestionCard({
   );
 }
 
-// ── Summary panel ─────────────────────────────────────────────────────────────
+// â”€â”€ Summary panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summary"]> }) {
   const p = summary.percentage;
@@ -349,7 +359,7 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
           <ul className="flex flex-col gap-1">
             {summary.strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-1.5 text-[12px] text-[#303030]">
-                <span className="text-green-500 mt-0.5">✓</span>{s}
+                <span className="text-green-500 mt-0.5">âœ“</span>{s}
               </li>
             ))}
           </ul>
@@ -361,7 +371,7 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
           <ul className="flex flex-col gap-1">
             {summary.improvements.map((s, i) => (
               <li key={i} className="flex items-start gap-1.5 text-[12px] text-[#303030]">
-                <span className="text-amber-500 mt-0.5">↑</span>{s}
+                <span className="text-amber-500 mt-0.5">â†‘</span>{s}
               </li>
             ))}
           </ul>
@@ -371,11 +381,13 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function MappingPage() {
   const { examId, sheetId } = useParams<{ examId: string; sheetId: string }>();
   const navigate = useNavigate();
+  const { isOpen, setIsOpen } = useSidebar();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [payload, setPayload] = useState<SplitViewPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -526,7 +538,7 @@ export default function MappingPage() {
       <div className="size-full flex items-center justify-center bg-gradient-to-b from-[#eee] to-[#dadada]">
         <div className="flex flex-col items-center gap-3">
           <SpinnerIcon size={32} />
-          <p className="text-[14px] text-[#6b6b6b]">Loading answer sheet…</p>
+          <p className="text-[14px] text-[#6b6b6b]">Loading answer sheetâ€¦</p>
         </div>
       </div>
     );
@@ -561,44 +573,31 @@ export default function MappingPage() {
   const isMapped = answerSheet.status === "mapped";
 
   return (
-    <div className="flex size-full bg-gradient-to-b from-[#eee] to-[#dadada]">
-      {/* Collapsed sidebar */}
-      <aside className="w-16 shrink-0 flex flex-col bg-white/80 backdrop-blur items-center py-4 gap-4 shadow-[4px_0_12px_rgba(0,0,0,0.05)] rounded-r-[20px]">
-        <div className="w-9 h-9 bg-[#303030] rounded-[10px] flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8L7 12L13 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <div className="w-9 h-9 bg-[#FF5623] rounded-full flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3 3H7V7H3ZM9 3H13V7H9ZM3 9H7V13H3ZM9 9H13V13H9Z" fill="white" />
-          </svg>
-        </div>
-        <button onClick={() => navigate("/classrooms")} className="w-9 h-9 flex items-center justify-center text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-[#f0f0f0] rounded-[8px] transition-colors">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><path d="M5 14H11M8 12V14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
-        </button>
-        <button onClick={() => navigate("/exams")} className="w-9 h-9 flex items-center justify-center text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-[#f0f0f0] rounded-[8px] transition-colors">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><path d="M5.5 5.5H10.5M5.5 8H10.5M5.5 10.5H8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-        </button>
-        <div className="flex-1" />
-        <div className="w-8 h-8 rounded-full bg-[#303030] flex items-center justify-center text-white text-[10px] font-bold">M</div>
-      </aside>
+    <div className="flex size-full bg-gradient-to-b from-[#eee] to-[#dadada] overflow-hidden">
+      {/* Shared sidebar â€“ collapsed on desktop, drawer on mobile */}
+      <div className="hidden lg:flex h-full">
+        <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
+      </div>
+      <div className="lg:hidden">
+        <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+      </div>
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top nav */}
-        <header className="h-14 flex items-center justify-between px-5 bg-white/70 backdrop-blur-md border-b border-white/60 shrink-0">
+        <header className="h-14 flex items-center justify-between px-4 md:px-5 bg-white/70 backdrop-blur-md border-b border-white/60 shrink-0">
           <div className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
+            <HamburgerButton onClick={() => setMobileOpen(true)} />
             <button onClick={() => navigate("/exams")} className="hover:text-[#1a1a1a] flex items-center gap-1">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
               Exams
             </button>
-            <span>›</span>
+            <span>â€º</span>
             <span className="text-[#1a1a1a] font-medium">
               {typeof answerSheet.exam === "object" ? answerSheet.exam.title : "Answer Sheet"}
             </span>
             {answerSheet.student && (
-              <><span>›</span><span className="text-[#1a1a1a]">{answerSheet.student.name}</span></>
+              <><span>â€º</span><span className="text-[#1a1a1a]">{answerSheet.student.name}</span></>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -608,7 +607,7 @@ export default function MappingPage() {
                 disabled={grading}
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF5623] text-white rounded-full text-[13px] font-semibold hover:bg-[#e04e1f] disabled:opacity-60 transition-colors"
               >
-                {grading ? <><SpinnerIcon size={12} /> Grading…</> : "Grade this sheet"}
+                {grading ? <><SpinnerIcon size={12} /> Gradingâ€¦</> : "Grade this sheet"}
               </button>
             )}
             {gradingError && (
@@ -671,7 +670,7 @@ export default function MappingPage() {
                           e.target.value = "";
                         }}
                       >
-                        <option value="">Assign to question…</option>
+                        <option value="">Assign to questionâ€¦</option>
                         {questions.map((q) => (
                           <option key={q._id} value={q._id}>Q{q.displayId}: {q.text.slice(0, 40)}</option>
                         ))}
@@ -697,7 +696,7 @@ export default function MappingPage() {
                   <button
                     onClick={() => setZoom((z) => Math.max(50, z - 10))}
                     className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
-                  >−</button>
+                  >âˆ’</button>
                   <span className="text-white/70 text-[12px] w-10 text-center">{zoom}%</span>
                   <button
                     onClick={() => setZoom((z) => Math.min(150, z + 10))}
@@ -755,7 +754,6 @@ export default function MappingPage() {
     </div>
   );
 }
-
 function SpinnerIcon({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 14 14" fill="none" className="animate-spin">

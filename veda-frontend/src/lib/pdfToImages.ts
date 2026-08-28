@@ -57,6 +57,7 @@ export async function* convertPdfToPngStream(
     await page.render({
       canvasContext: ctx,
       viewport,
+      canvas,
     }).promise;
 
     const blob = await new Promise<Blob>((resolve, reject) => {
