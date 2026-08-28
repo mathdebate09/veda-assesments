@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { uploadQuestionPaper, uploadAnswerSheet, getExam } from "@/lib/api";
 import { convertFileToPngList } from "@/lib/pdfToImages";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
+import { useSidebar } from "@/context/SidebarContext";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -25,6 +28,8 @@ function validateFile(file: File): string | undefined {
 export default function UploadPage() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
+  const { isOpen, setIsOpen } = useSidebar();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [examTitle, setExamTitle] = useState("");
   const [questionFile, setQuestionFile] = useState<FileState | null>(null);
@@ -42,7 +47,7 @@ export default function UploadPage() {
     if (examId) {
       getExam(examId)
         .then((d) => setExamTitle(d?.title ?? ""))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [examId]);
 
@@ -107,24 +112,21 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-full bg-gradient-to-b from-[#f5f5f5] to-[#e9e5e5] flex">
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Shared sidebar */}
+      <div className="hidden h-full p-3 lg:flex">
+        <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
+      </div>
+      <div className="lg:hidden">
+        <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+      </div>
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top nav */}
-        <header className="h-14 flex items-center justify-between px-6 bg-white/70 backdrop-blur-md border-b border-white/60 shrink-0">
-          <div className="flex items-center gap-2 text-[14px] text-[#6b6b6b]">
-            <button onClick={() => navigate("/exams")} className="hover:text-[#1a1a1a] transition-colors">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="inline -mt-0.5 mr-1">
-                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Exams
-            </button>
-            {examTitle && <><span>›</span><span className="text-[#1a1a1a] font-medium">{examTitle}</span></>}
-          </div>
-          <TopNavRight />
-        </header>
+        <TopBar
+          title={<>{examTitle ? <>Exams <span className="text-[#9b9b9b]">/</span> {examTitle}</> : "Exams"}</>}
+          showBack
+          mobileMenuOpen={() => setMobileOpen(true)}
+        />
 
         {/* Content */}
         <main className="flex-1 flex flex-col items-center justify-center px-6 py-10">
@@ -210,8 +212,8 @@ export default function UploadPage() {
                   {!questionFile?.file || !answerFile?.file
                     ? "Upload both files and enter student name to continue"
                     : !studentName.trim()
-                    ? "Enter the student's name to continue"
-                    : "Fix file errors above to continue"}
+                      ? "Enter the student's name to continue"
+                      : "Fix file errors above to continue"}
                 </p>
               )}
             </div>
@@ -241,15 +243,14 @@ function DropZone({ label, hint, fileState, inputRef, onDrop, onChange, onRemove
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => { setDragging(false); onDrop(e); }}
       onClick={() => !fileState && inputRef.current?.click()}
-      className={`relative rounded-[16px] border-2 border-dashed transition-all ${
-        dragging
-          ? "border-[#FF5623] bg-[rgba(255,86,35,0.04)]"
-          : fileState?.error
+      className={`relative rounded-[16px] border-2 border-dashed transition-all ${dragging
+        ? "border-[#FF5623] bg-[rgba(255,86,35,0.04)]"
+        : fileState?.error
           ? "border-red-400 bg-red-50"
           : fileState
-          ? "border-[#e0e0e0] bg-white"
-          : "border-[#d0d0d0] bg-white/60 cursor-pointer hover:border-[#b0b0b0] hover:bg-white/80"
-      } min-h-[160px] flex flex-col items-center justify-center p-5 gap-3`}
+            ? "border-[#e0e0e0] bg-white"
+            : "border-[#d0d0d0] bg-white/60 cursor-pointer hover:border-[#b0b0b0] hover:bg-white/80"
+        } min-h-[160px] flex flex-col items-center justify-center p-5 gap-3`}
     >
       <input
         ref={inputRef}
@@ -301,61 +302,6 @@ function DropZone({ label, hint, fileState, inputRef, onDrop, onChange, onRemove
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function Sidebar() {
-  const navigate = useNavigate();
-  return (
-    <aside className="w-[220px] shrink-0 flex flex-col bg-white shadow-[4px_0_24px_rgba(0,0,0,0.06)] z-10 rounded-r-[20px]">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <div className="w-8 h-8 bg-[#303030] rounded-[8px] flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8L7 12L13 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <span className="font-bold text-[#1a1a1a] text-[15px] tracking-tight">VedaAI</span>
-      </div>
-      <div className="px-4 mb-5">
-        <button className="w-full flex items-center gap-2 px-3 py-2 bg-[#303030] text-white rounded-[10px] text-[13px] font-semibold">
-          <span className="text-[#FF5623]">✦</span>
-          AI Teacher's Toolkit
-        </button>
-      </div>
-      <nav className="flex-1 px-3 flex flex-col gap-1">
-        {[
-          { label: "Home", to: "/exams" },
-          { label: "My Classroom", to: "/classrooms" },
-          { label: "Exams", to: "/exams" },
-        ].map(({ label, to }) => (
-          <button
-            key={label}
-            onClick={() => navigate(to)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-[10px] text-[14px] text-[#6b6b6b] hover:bg-[#f5f5f5] hover:text-[#1a1a1a] transition-colors ${label === "Exams" ? "bg-[#f5f5f5] text-[#1a1a1a] font-semibold" : ""}`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-function TopNavRight() {
-  return (
-    <div className="flex items-center gap-3">
-      <button className="w-7 h-7 flex items-center justify-center rounded-full text-[#6b6b6b] hover:bg-[#f0f0f0] text-[13px]">?</button>
-      <div className="relative">
-        <button className="w-7 h-7 flex items-center justify-center rounded-full text-[#6b6b6b] hover:bg-[#f0f0f0]">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2.5C5.79 2.5 4 4.29 4 6.5V10L2.5 11.5H13.5L12 10V6.5C12 4.29 10.21 2.5 8 2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-            <path d="M6.5 11.5C6.5 12.33 7.17 13 8 13C8.83 13 9.5 12.33 9.5 11.5" stroke="currentColor" strokeWidth="1.3" />
-          </svg>
-        </button>
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#FF5623] rounded-full" />
-      </div>
-      <div className="w-7 h-7 rounded-full bg-[#303030] flex items-center justify-center text-white text-[11px] font-bold">M</div>
     </div>
   );
 }

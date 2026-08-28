@@ -1,7 +1,8 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getExam } from "@/lib/api";
-import Sidebar, { HamburgerButton } from "@/components/Sidebar";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
 import extractingIcon from "@/assets/graphics/extracting.svg";
 
@@ -40,7 +41,7 @@ export default function LoadingPage() {
   return (
     <div className="flex h-full bg-gradient-to-b from-[#f5f5f5] to-[#e9e5e5] overflow-hidden">
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex h-full">
+      <div className="hidden h-full p-3 lg:flex">
         <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
       </div>
       {/* Mobile drawer sidebar */}
@@ -50,16 +51,7 @@ export default function LoadingPage() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top nav */}
-        <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-white/70 backdrop-blur-md border-b border-white/60 shrink-0">
-          <div className="flex items-center gap-3 text-[14px] text-[#6b6b6b]">
-            <HamburgerButton onClick={() => setMobileOpen(true)} />
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#c0c0c0]">
-              <rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-            </svg>
-            <span className="text-[#1a1a1a] font-medium">Exams</span>
-          </div>
-        </header>
+        <TopBar title="Exams" showBack mobileMenuOpen={() => setMobileOpen(true)} />
 
         {/* Extracting state */}
         <main className="flex-1 flex items-center justify-center">

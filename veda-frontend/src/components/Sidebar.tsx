@@ -1,59 +1,51 @@
-﻿import { NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { clearToken } from "@/lib/auth";
+﻿import { NavLink } from "react-router-dom";
 import { useSidebar } from "@/context/SidebarContext";
 import vedaLogo from "@/assets/logos/vedaai.png";
+import sparkleIcon from "@/assets/sidebar/sparkle.svg";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-function HomeIcon({ active }: { active?: boolean }) {
+type SidebarIconProps = { active?: boolean };
+
+function HomeIcon({ active }: SidebarIconProps) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path
-        d="M2.25 7.5L9 2.25L15.75 7.5V15.75C15.75 16.1642 15.4142 16.5 15 16.5H11.25V11.25H6.75V16.5H3C2.58579 16.5 2.25 16.1642 2.25 15.75V7.5Z"
-        stroke={active ? "#1a1a1a" : "#6b6b6b"}
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
+    <svg aria-hidden="true" className="h-4.5 w-4.5 shrink-0" viewBox="0 0 20 20" fill="none">
+      <path d="M11.667 2.5h5.832v5.833h-5.832zM2.5 2.5h5.833v5.833H2.5zM11.667 11.667h5.832V17.5h-5.832zM2.5 11.667h5.833V17.5H2.5z" stroke="currentColor" strokeOpacity={active ? 1 : 0.8} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function ClassroomIcon({ active }: { active?: boolean }) {
+function ClassroomIcon({ active }: SidebarIconProps) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="2.25" y="3.375" width="13.5" height="10.125" rx="1.5" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.4" />
-      <path d="M5.625 15.75H12.375" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M9 13.5V15.75" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M5.625 7.875H12.375M5.625 10.125H10.125" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.3" strokeLinecap="round" />
+    <svg aria-hidden="true" className="h-4.5 w-4.5 shrink-0" viewBox="0 0 20 14" fill="none">
+      <path d="M1.995 0h16.01C19.107 0 20 .867 20 1.937v10.126c0 .744-.431 1.389-1.064 1.714-.125-.387-.273-.84-.479-1.456-.08-.278-.106-.428-.16-.568-.08-.12-.203-.264-.319-.407l-.027-.032c-.401-.475-.911-1.087-1.343-1.614-.415-.505-.757-.932-.891-1.046-.32-.271-.771-.568-1.45-.568H9.668a3.1 3.1 0 0 1-.253-.065 30 30 0 0 1-2.048-.844c-1.153-1.174-2.018-2.057-2.594-2.648l-.346-.359c-.224-.234-.597-.258-.85-.055a.59.59 0 0 0-.094.812c1.808 2.279 2.735 3.442 2.781 3.489.112.114.444.327.851.594.42.275.919.606 1.303.865.358.241.559.31.599.646.088.741.194 1.856.319 3.345H1.995C.893 14 0 13.133 0 12.063V1.937C0 .867.893 0 1.995 0Z" fill="currentColor" fillOpacity={active ? 1 : 0.8} />
+      <circle cx="12.473" cy="5.308" r="2.313" fill="white" />
     </svg>
   );
 }
 
-function AssignmentsIcon({ active }: { active?: boolean }) {
+function AssignmentsIcon({ active }: SidebarIconProps) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="3.375" y="1.688" width="11.25" height="14.625" rx="1.5" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.4" />
-      <path d="M6.188 6.188H11.813M6.188 9H11.813M6.188 11.813H9.563" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.3" strokeLinecap="round" />
+    <svg aria-hidden="true" className="h-4.5 w-4.5 shrink-0" viewBox="0 0 20 20" fill="none">
+      <path d="M5.25 2.25h6.5l4 4v11.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-12.5a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeOpacity={active ? 1 : 0.8} strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M11.75 2.5v4h3.75M7.25 10h5.5M7.25 13.25h4" stroke="currentColor" strokeOpacity={active ? 1 : 0.8} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function ExamIcon({ active }: { active?: boolean }) {
+function ExamIcon({ active }: SidebarIconProps) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="2.25" y="2.25" width="13.5" height="13.5" rx="2" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.4" />
-      <path d="M5.625 6.75H12.375M5.625 9H12.375M5.625 11.25H9" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.3" strokeLinecap="round" />
-      <path d="M6.75 2.25V5.25M11.25 2.25V5.25" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.3" strokeLinecap="round" />
+    <svg aria-hidden="true" className="h-4.5 w-4.5 shrink-0" viewBox="0 0 20 20" fill="none">
+      <path d="M6.25 3.25h7.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5h-7.5a1.5 1.5 0 0 1-1.5-1.5v-12a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeOpacity={active ? 1 : 0.8} strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M7.5 3.25V2h5v1.25M7.5 8h5M7.5 11h5M7.5 14h3" stroke="currentColor" strokeOpacity={active ? 1 : 0.8} strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
-function LibraryIcon({ active }: { active?: boolean }) {
+function LibraryIcon({ active }: SidebarIconProps) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="9" r="6.75" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.4" />
-      <path d="M9 6.75V9.563L11.25 11.25" stroke={active ? "#1a1a1a" : "#6b6b6b"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    <svg aria-hidden="true" className="h-4.5 w-4.5 shrink-0" viewBox="0 0 20 20" fill="none">
+      <path d="M17.675 13.241a8.33 8.33 0 1 1-11.009-10.884M18.333 10A8.333 8.333 0 0 0 10 1.667V10h8.333Z" stroke="currentColor" strokeOpacity={active ? 1 : 0.8} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -63,15 +55,6 @@ function SettingsIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z" stroke="#6b6b6b" strokeWidth="1.3" />
       <path d="M13 8C13 8.35 12.97 8.69 12.92 9.03L14.54 10.29L13.04 12.71L11.11 12.06C10.65 12.41 10.13 12.69 9.57 12.87L9.28 14.9H6.72L6.43 12.87C5.87 12.69 5.35 12.41 4.89 12.06L2.96 12.71L1.46 10.29L3.08 9.03C3.03 8.69 3 8.35 3 8C3 7.65 3.03 7.31 3.08 6.97L1.46 5.71L2.96 3.29L4.89 3.94C5.35 3.59 5.87 3.31 6.43 3.13L6.72 1.1H9.28L9.57 3.13C10.13 3.31 10.65 3.59 11.11 3.94L13.04 3.29L14.54 5.71L12.92 6.97C12.97 7.31 13 7.65 13 8Z" stroke="#6b6b6b" strokeWidth="1.3" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <path d="M3 8C7 8 8 7 8 3C8 7 9 8 13 8C9 8 8 9 8 13C8 9 7 8 3 8Z" fill="#FF5623" />
-      <path d="M0.5 4C2.5 4 3 3.5 3 1.5C3 3.5 3.5 4 5.5 4C3.5 4 3 4.5 3 6.5C3 4.5 2.5 4 0.5 4Z" fill="#FF5623" />
     </svg>
   );
 }
@@ -104,7 +87,7 @@ function CloseIcon() {
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: "Home", to: "/exams", icon: HomeIcon },
+  { label: "Home", to: "/home", icon: HomeIcon },
   { label: "My Classroom", to: "/classrooms", icon: ClassroomIcon },
   { label: "Assignments", to: "/assignments", icon: AssignmentsIcon },
   { label: "Exams", to: "/exams", icon: ExamIcon, exact: true },
@@ -122,13 +105,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed = false, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const navigate = useNavigate();
   const { userInfo } = useSidebar();
-
-  function handleLogout() {
-    clearToken();
-    navigate("/login");
-  }
 
   if (collapsed) {
     return <CollapsedSidebar onToggle={onToggle} userInfo={userInfo} />;
@@ -148,10 +125,10 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen, onMob
       <aside
         className={`
           flex flex-col bg-white shadow-[4px_0_24px_rgba(0,0,0,0.07)] z-40
-          rounded-r-[20px] h-full
+          rounded-[20px] h-full
           ${mobileOpen !== undefined
-            ? `fixed top-0 left-0 w-[230px] transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:relative lg:flex`
-            : "relative w-[230px] shrink-0"
+            ? `fixed top-0 left-0 w-[250px] transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:relative lg:flex`
+            : "relative w-[250px] shrink-0"
           }
         `}
       >
@@ -189,9 +166,17 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen, onMob
 
         {/* AI Teacher's Toolkit CTA */}
         <div className="px-4 mb-5 shrink-0">
-          <button className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-[#303030] text-white rounded-[10px] text-[13px] font-semibold hover:bg-[#1a1a1a] transition-colors" style={{ fontFamily: "Arial, sans-serif" }}>
-            <SparkleIcon />
-            AI Teacher&apos;s Toolkit
+          <button
+            className="w-full rounded-full bg-linear-to-b from-[#fd8965] to-[#c26143] p-1 text-white shadow-[0_2px_4px_rgba(194,97,67,0.28)] transition-shadow hover:shadow-[0_3px_6px_rgba(194,97,67,0.38)]"
+            aria-label="Open AI Teacher's Toolkit"
+          >
+            <span
+              className="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#303030] px-4 py-2 font-medium transition-colors hover:bg-[#1a1a1a]"
+              style={{ fontFamily: "Arial, sans-serif" }}
+            >
+              <img src={sparkleIcon} alt="" className="h-4.5 w-4.75 shrink-0" />
+              AI Teacher&apos;s Toolkit
+            </span>
           </button>
         </div>
 
@@ -203,10 +188,9 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen, onMob
               to={to}
               end={to === "/exams" || to === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[14px] transition-colors ${
-                  isActive
-                    ? "bg-[#f5f5f5] text-[#1a1a1a] font-semibold"
-                    : "text-[#6b6b6b] hover:bg-[#f5f5f5] hover:text-[#1a1a1a] font-medium"
+                `flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[14px] transition-colors ${isActive
+                  ? "bg-[#f5f5f5] text-[#1a1a1a] font-semibold"
+                  : "text-[#6b6b6b] hover:bg-[#f5f5f5] hover:text-[#1a1a1a] font-medium"
                 }`
               }
               style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
@@ -224,14 +208,14 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen, onMob
         {/* Bottom: Settings + User info */}
         <div className="px-4 py-4 shrink-0 flex flex-col gap-3">
           {/* Settings */}
-          <button
+          <NavLink
+            to="/settings"
             className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#6b6b6b] hover:text-[#1a1a1a] rounded-[10px] hover:bg-[#f5f5f5] transition-colors w-full text-left"
             style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
-            onClick={handleLogout}
           >
             <SettingsIcon />
             Settings
-          </button>
+          </NavLink>
 
           {/* User / Institute card */}
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-[12px] bg-[#f9f9f9] border border-[#f0f0f0]">
@@ -267,17 +251,18 @@ interface CollapsedSidebarProps {
 }
 
 function CollapsedSidebar({ onToggle, userInfo }: CollapsedSidebarProps) {
-  const navigate = useNavigate();
   return (
-    <aside className="w-[56px] shrink-0 flex flex-col bg-white shadow-[4px_0_24px_rgba(0,0,0,0.07)] z-10 rounded-r-[20px] items-center py-4 gap-1">
+    <aside className="w-[56px] shrink-0 flex flex-col bg-white shadow-[4px_0_24px_rgba(0,0,0,0.07)] z-10 rounded-[20px] items-center py-4 gap-1">
       {/* Logo */}
       <div className="mb-3">
         <img src={vedaLogo} alt="VedaAI" className="w-9 h-9 rounded-[10px] object-cover" />
       </div>
 
       {/* AI Toolkit (just icon) */}
-      <div className="w-9 h-9 rounded-full bg-[#303030] flex items-center justify-center mb-3">
-        <SparkleIcon />
+      <div className="mb-3 rounded-full bg-linear-to-b from-[#fd8965] to-[#c26143] p-1">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#303030]">
+          <img src={sparkleIcon} alt="AI Teacher's Toolkit" className="h-[18px] w-[19px]" />
+        </div>
       </div>
 
       {/* Nav icons */}
@@ -288,8 +273,7 @@ function CollapsedSidebar({ onToggle, userInfo }: CollapsedSidebarProps) {
           end={to === "/exams" || to === "/"}
           title={label}
           className={({ isActive }) =>
-            `w-9 h-9 flex items-center justify-center rounded-[8px] transition-colors ${
-              isActive ? "bg-[#f0f0f0] text-[#1a1a1a]" : "text-[#6b6b6b] hover:bg-[#f0f0f0] hover:text-[#1a1a1a]"
+            `w-9 h-9 flex items-center justify-center rounded-[8px] transition-colors ${isActive ? "bg-[#f0f0f0] text-[#1a1a1a]" : "text-[#6b6b6b] hover:bg-[#f0f0f0] hover:text-[#1a1a1a]"
             }`
           }
         >
@@ -298,6 +282,18 @@ function CollapsedSidebar({ onToggle, userInfo }: CollapsedSidebarProps) {
       ))}
 
       <div className="flex-1" />
+
+      {/* Settings */}
+      <NavLink
+        to="/settings"
+        title="Settings"
+        className={({ isActive }) =>
+          `w-9 h-9 flex items-center justify-center rounded-[8px] transition-colors ${isActive ? "bg-[#f0f0f0] text-[#1a1a1a]" : "text-[#6b6b6b] hover:bg-[#f0f0f0] hover:text-[#1a1a1a]"
+          }`
+        }
+      >
+        <SettingsIcon />
+      </NavLink>
 
       {/* Institute avatar */}
       {userInfo.instituteLogo ? (

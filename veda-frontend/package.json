@@ -1,5 +1,5 @@
 {
-  "name": "figma-make-app",
+  "name": "veda-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -10,6 +10,7 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.46.0",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

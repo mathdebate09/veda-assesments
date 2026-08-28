@@ -10,6 +10,9 @@ import {
 } from "@/lib/api";
 import { convertFileToPngList } from "@/lib/pdfToImages";
 import mappingGraphic from "@/assets/graphics/mapping.png";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
+import { useSidebar } from "@/context/SidebarContext";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -44,6 +47,8 @@ const SHEET_STATUS_CONFIG: Record<string, { label: string; color: string; badge:
 export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
+  const { isOpen, setIsOpen } = useSidebar();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [exam, setExam] = useState<ExamDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +102,7 @@ export default function ExamDetailPage() {
       try {
         const sheets = await getAnswerSheets(examId);
         setPreviousSheets(sheets);
-      } catch {/* ignore */}
+      } catch {/* ignore */ }
       finally {
         setLoadingPrevious(false);
       }
@@ -166,7 +171,7 @@ export default function ExamDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f5f5f5]">
+      <div className="flex h-screen items-center justify-center bg-[#f3f2f1] text-[#252525]">
         <div className="flex flex-col items-center gap-3">
           <SpinnerIcon size={32} />
           <p className="text-[14px] text-[#6b6b6b]">Loading exam details…</p>
@@ -177,8 +182,8 @@ export default function ExamDetailPage() {
 
   if (error || !exam) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f5f5f5]">
-        <div className="bg-red-50 border border-red-200 rounded-[16px] p-8 text-center max-w-sm">
+      <div className="flex h-screen items-center justify-center bg-[#f3f2f1] text-[#252525]">
+        <div className="max-w-sm rounded-xl border border-[#f2cfc5] bg-[#fffaf8] p-8 text-center shadow-[0_12px_30px_rgba(37,37,37,0.06)]">
           <p className="text-[15px] font-semibold text-red-700 mb-1">Failed to load exam</p>
           <p className="text-[13px] text-red-600 mb-4">{error || "Exam not found."}</p>
           <button
@@ -193,120 +198,61 @@ export default function ExamDetailPage() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-gradient-to-b from-[#f5f5f5] to-[#e8e5e5] overflow-hidden font-sans">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="flex h-screen w-full overflow-hidden bg-[#f3f2f1] text-[#252525]">
+      {/* Shared sidebar */}
+      <div className="hidden h-full p-3 lg:flex">
+        <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
+      </div>
+      <div className="lg:hidden">
+        <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+      </div>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Top Navigation */}
-        <header className="h-16 flex items-center justify-between px-8 bg-white/70 backdrop-blur-md border-b border-white/60 shrink-0 sticky top-0 z-20">
-          <div className="flex items-center gap-3 text-[14px] text-[#6b6b6b]">
-            <button
-              onClick={() => navigate("/exams")}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#e8e8e8] text-[#1a1a1a] transition-colors"
-              title="Back to Exams"
-            >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path d="M16 10H4M4 10L9 5M4 10L9 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-2">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="text-[#6b6b6b]">
-                <rect x="3.5" y="2" width="11" height="14" rx="1.8" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M6 6H12M6 9H12M6 12H9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              <span className="font-semibold text-[#1a1a1a]">{exam.title}</span>
-              {exam.subject && (
-                <span className="text-[#8c8c8c] text-[13px]">({exam.subject})</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Previous mappings button */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <TopBar
+          title={<>{exam.title}{exam.subject && <span className="ml-1 text-[13px] text-[#8c8c8c]">({exam.subject})</span>}</>}
+          showBack
+          mobileMenuOpen={() => setMobileOpen(true)}
+          actions={
             <button
               onClick={openPreviousMappings}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-[#fafafa] text-[#303030] rounded-full text-[13px] font-semibold border border-[#d8d8d8] shadow-sm hover:shadow transition-all"
+              className="hidden items-center gap-2 rounded-full border border-[#d8d8d8] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#303030] shadow-sm transition-all hover:bg-[#fafafa] hover:shadow sm:flex"
             >
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <path d="M2.5 4H13.5M2.5 8H13.5M2.5 12H9.5" stroke="#FF5623" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 4H13.5M2.5 8H13.5M2.5 12H9.5" stroke="#FF5623" strokeWidth="1.8" strokeLinecap="round" /></svg>
               Previous Mappings
-              {previousSheets.length > 0 && (
-                <span className="bg-[#FF5623] text-white text-[11px] font-bold px-1.5 py-0.2 rounded-full">
-                  {previousSheets.length}
-                </span>
-              )}
+              {previousSheets.length > 0 && <span className="rounded-full bg-[#FF5623] px-1.5 py-0.2 text-[11px] font-bold text-white">{previousSheets.length}</span>}
             </button>
-
-            {/* Help */}
-            <button className="w-8 h-8 flex items-center justify-center rounded-full text-[#6b6b6b] hover:bg-[#f0f0f0]">
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M10 14V14.5M10 11.5C10 10.5 11.5 10 11.5 8.5C11.5 7.4 10.8 6.5 9.8 6.5C8.8 6.5 8.2 7.2 8.2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-
-            {/* Notification */}
-            <div className="relative">
-              <button className="w-8 h-8 flex items-center justify-center rounded-full text-[#6b6b6b] hover:bg-[#f0f0f0]">
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 3C7.2 3 5 5.2 5 8V12L3 14H17L15 12V8C15 5.2 12.8 3 10 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                  <path d="M8 15C8 16.1 8.9 17 10 17C11.1 17 12 16.1 12 15" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              </button>
-              <span className="absolute top-0 right-0 w-4 h-4 bg-[#FF5623] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                8
-              </span>
-            </div>
-
-            {/* Sparkle */}
-            <button className="w-8 h-8 flex items-center justify-center text-[#FF5623]">
-              <span className="text-[17px]">✦</span>
-            </button>
-
-            {/* User Profile */}
-            <div className="flex items-center gap-2 pl-2 border-l border-[#e0e0e0]">
-              <div className="w-8 h-8 rounded-full bg-[#303030] flex items-center justify-center text-white text-[12px] font-bold shadow-sm">
-                M
-              </div>
-              <span className="text-[13px] font-semibold text-[#1a1a1a]">Madhur Rastogi</span>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-[#8c8c8c]">
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-        </header>
+          }
+        />
 
         {/* Content Body */}
-        <main className="flex-1 flex flex-col items-center justify-center px-6 py-10 max-w-[960px] w-full mx-auto">
+        <main className="mx-auto flex w-full max-w-245 flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
           {/* Header Title */}
-          <div className="text-center mb-2">
-            <h1 className="text-[30px] md:text-[34px] font-extrabold text-[#222] tracking-tight flex items-center justify-center gap-2.5 flex-wrap">
+          <div className="mb-1 text-center">
+            <h1 className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[28px] font-bold leading-tight tracking-[-0.04em] text-[#252525] sm:text-[34px]">
               <span>Upload</span>
-              <span className="bg-[#FFE6DE] text-[#FF5623] px-3.5 py-1 rounded-[12px] border border-[#FFD0C2]/70 font-extrabold inline-block shadow-sm">
+              <span className="inline-block rounded-[7px] bg-[#ffe3da] px-2.5 py-0.5 font-bold text-[#ff5623] sm:px-3">
                 Question Paper & Answer Sheets
               </span>
             </h1>
-            <p className="text-[15px] text-[#6b6b6b] mt-2 font-normal">
+            <p className="mt-2 text-[14px] text-[#6f6c6a] sm:text-[15px]">
               Upload both files to get started
             </p>
           </div>
 
           {/* Central Graphic */}
-          <div className="my-5 flex justify-center">
+          <div className="my-4 flex justify-center sm:my-5">
             <img
               src={mappingGraphic}
               alt="Teacher Illustration"
-              className="w-[130px] h-[130px] object-contain drop-shadow-md select-none pointer-events-none"
+              className="h-28 w-28 select-none object-contain drop-shadow-[0_7px_10px_rgba(255,86,35,0.08)] pointer-events-none sm:h-32 sm:w-32"
             />
           </div>
 
           {/* Upload Cards Box */}
-          <div className="w-full bg-white/60 backdrop-blur-md rounded-[24px] border border-white p-7 shadow-[0_8px_32px_rgba(0,0,0,0.05)] flex flex-col gap-5">
+          <div className="flex w-full flex-col gap-4 rounded-[18px] border border-white/90 bg-white/65 p-4 shadow-[0_10px_28px_rgba(37,37,37,0.045)] backdrop-blur-md sm:p-5">
             {/* Two Side-by-Side Upload Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Question Paper Card */}
               <UploadCard
                 label="Question Paper"
@@ -333,9 +279,9 @@ export default function ExamDetailPage() {
             </div>
 
             {/* Student Info Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#f0ecec]">
+            <div className="grid grid-cols-1 gap-4 border-t border-[#ece8e6] pt-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-bold text-[#444] uppercase tracking-wider">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#5e5a58]">
                   Serial Number <span className="text-[#FF5623]">*</span>
                 </label>
                 <input
@@ -343,12 +289,12 @@ export default function ExamDetailPage() {
                   value={serialNo}
                   onChange={(e) => setSerialNo(e.target.value)}
                   placeholder="e.g. 001, 10B-01"
-                  className="h-11 px-4 rounded-[12px] border border-[#d8d8d8] bg-white text-[14px] text-[#1a1a1a] placeholder-[#adadad] outline-none focus:border-[#FF5623] focus:ring-2 focus:ring-[#FF5623]/10 transition-all"
+                  className="h-11 rounded-[9px] border border-[#d9d5d2] bg-white px-3.5 text-[14px] text-[#252525] outline-none transition-all placeholder:text-[#aaa5a1] focus:border-[#ff5623] focus:ring-2 focus:ring-[#ff5623]/10"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-bold text-[#444] uppercase tracking-wider">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#5e5a58]">
                   Student Name <span className="text-[#9b9b9b] font-normal normal-case">(Optional)</span>
                 </label>
                 <input
@@ -356,43 +302,44 @@ export default function ExamDetailPage() {
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder="e.g. Rahul Sharma"
-                  className="h-11 px-4 rounded-[12px] border border-[#d8d8d8] bg-white text-[14px] text-[#1a1a1a] placeholder-[#adadad] outline-none focus:border-[#FF5623] focus:ring-2 focus:ring-[#FF5623]/10 transition-all"
+                  className="h-11 rounded-[9px] border border-[#d9d5d2] bg-white px-3.5 text-[14px] text-[#252525] outline-none transition-all placeholder:text-[#aaa5a1] focus:border-[#ff5623] focus:ring-2 focus:ring-[#ff5623]/10"
                 />
               </div>
             </div>
 
-            {submitError && (
-              <div className="text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-[12px] px-4 py-3">
-                {submitError}
-              </div>
-            )}
+          </div>
 
-            {/* Action CTA */}
-            <div className="flex flex-col items-center gap-2 pt-2">
-              <button
-                onClick={handleStartMapping}
-                disabled={!canStart}
-                className="flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#303030] text-white text-[14px] font-bold hover:bg-[#1a1a1a] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-md"
-              >
-                {submitting ? (
-                  <>
-                    <SpinnerIcon size={16} />
-                    <span>{progressText || "Processing Document & Answers…"}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Start Mapping</span>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8H13M9 4L13 8L9 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </>
-                )}
-              </button>
-
-              <p className="text-[12px] text-[#8c8c8c] text-center">
-                Once both files are uploaded, you'll be able to map answers with questions
-              </p>
+          {submitError && (
+            <div className="mt-4 w-full rounded-[9px] border border-[#f2cfc5] bg-[#fff5f1] px-4 py-3 text-[13px] text-red-600">
+              {submitError}
             </div>
+          )}
+
+          {/* Action CTA */}
+          <div className="flex flex-col items-center gap-2 pt-5">
+            <button
+              onClick={handleStartMapping}
+              disabled={!canStart}
+              className="flex items-center gap-2.5 rounded-full bg-[#303030] px-7 py-3 text-[14px] font-semibold text-white shadow-[0_5px_12px_rgba(48,48,48,0.18)] transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              {submitting ? (
+                <>
+                  <SpinnerIcon size={16} />
+                  <span>{progressText || "Processing Document & Answers…"}</span>
+                </>
+              ) : (
+                <>
+                  <span>Start Mapping</span>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8H13M9 4L13 8L9 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </>
+              )}
+            </button>
+
+            <p className="text-center text-[12px] text-[#8c8885]">
+              Once both files are uploaded, you'll be able to map answers with questions
+            </p>
           </div>
         </main>
       </div>
@@ -450,17 +397,16 @@ function UploadCard({
       onClick={() => {
         if (!file) inputRef.current?.click();
       }}
-      className={`relative rounded-[18px] border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 min-h-[160px] ${
-        dragging
-          ? "border-[#FF5623] bg-[rgba(255,86,35,0.06)] scale-[1.01]"
-          : error
-          ? "border-red-400 bg-red-50/70"
+      className={`relative flex min-h-34 flex-col items-center justify-center rounded-[14px] border-2 border-dashed p-4 transition-all ${dragging
+        ? "scale-[1.01] border-[#ff5623] bg-[rgba(255,86,35,0.06)]"
+        : error
+          ? "border-red-300 bg-[#fff7f5]"
           : file
-          ? "border-[#e0e0e0] bg-white shadow-sm"
-          : existingUploaded
-          ? "border-green-300 bg-green-50/50 hover:border-green-400 cursor-pointer"
-          : "border-[#d8d8d8] bg-white/70 cursor-pointer hover:border-[#b8b8b8] hover:bg-white"
-      }`}
+            ? "border-[#ddd8d5] bg-white shadow-[0_3px_10px_rgba(37,37,37,0.04)]"
+            : existingUploaded
+              ? "cursor-pointer border-green-300 bg-green-50/50 hover:border-green-400"
+              : "cursor-pointer border-[#d6d1ce] bg-white/75 hover:border-[#b7b0ac] hover:bg-white"
+        }`}
     >
       <input
         ref={inputRef}
@@ -474,23 +420,23 @@ function UploadCard({
       />
 
       {file ? (
-        <div className="flex items-center gap-3.5 w-full">
-          <div className="w-11 h-13 bg-red-50 border border-red-200 rounded-[8px] flex items-center justify-center shrink-0">
-            <span className="text-[10px] font-extrabold text-red-600">
+        <div className="flex w-full items-center gap-3.5">
+          <div className="flex h-12 w-11 shrink-0 items-center justify-center rounded-lg border border-[#f2c7bb] bg-[#fff1ed]">
+            <span className="text-[10px] font-extrabold text-[#e84f26]">
               {file.name.split(".").pop()?.toUpperCase() ?? "FILE"}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-[#1a1a1a] truncate">{file.name}</p>
-            <p className="text-[11px] text-[#8c8c8c]">{formatBytes(file.size)}</p>
-            {error && <p className="text-[11px] text-red-600 mt-0.5 font-medium">{error}</p>}
+            <p className="truncate text-[13px] font-semibold text-[#252525]">{file.name}</p>
+            <p className="text-[11px] text-[#8c8885]">{formatBytes(file.size)}</p>
+            {error && <p className="mt-0.5 text-[11px] font-medium text-red-600">{error}</p>}
           </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onRemove();
             }}
-            className="w-7 h-7 rounded-full bg-[#f0f0f0] hover:bg-[#e0e0e0] flex items-center justify-center text-[#666] shrink-0 transition-colors"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f1efee] text-[#666] transition-colors hover:bg-[#e2dfdd]"
             title="Remove file"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -499,30 +445,30 @@ function UploadCard({
           </button>
         </div>
       ) : existingUploaded ? (
-        <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M4 10L8 14L16 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <div>
-            <p className="text-[13px] font-bold text-green-700">{existingText ?? "File Uploaded"}</p>
-            <p className="text-[11px] text-[#6b6b6b] mt-0.5">Click to replace question paper</p>
+            <p className="text-[13px] font-semibold text-green-700">{existingText ?? "File Uploaded"}</p>
+            <p className="mt-0.5 text-[11px] text-[#6b6b6b]">Click to replace question paper</p>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center text-center gap-2.5">
-          <div className="w-10 h-10 rounded-[10px] bg-[#f2f2f2] flex items-center justify-center text-[#444] shadow-sm">
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[9px] bg-[#f1f0ef] text-[#3f3b39]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M12 15V4M12 4L8 8M12 4L16 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M4 14V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
           <div>
-            <p className="text-[14px] font-bold text-[#222]">
+            <p className="text-[14px] font-semibold text-[#252525]">
               Upload <span className="text-[#FF5623]">{label}</span>
             </p>
-            <p className="text-[11px] text-[#8c8c8c] mt-0.5">{hint}</p>
+            <p className="mt-0.5 text-[11px] text-[#8c8885]">{hint}</p>
           </div>
         </div>
       )}
@@ -543,24 +489,24 @@ function PreviousMappingsModal({ examId, sheets, loading, onClose }: PreviousMap
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white rounded-[24px] shadow-2xl p-7 w-full max-w-[560px] max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/35 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[85vh] w-full max-w-140 flex-col rounded-[18px] bg-white p-5 shadow-[0_20px_60px_rgba(37,37,37,0.18)] sm:p-7">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#f0f0f0] shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#f0f0f0] pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-[10px] bg-[#FFE5DC] text-[#FF5623] flex items-center justify-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#ffe5dc] text-[#ff5623]">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M3 4.5H15M3 9H15M3 13.5H10.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-[#1a1a1a]">Previous Mappings</h2>
-              <p className="text-[12px] text-[#8c8c8c]">{sheets.length} answer sheet{sheets.length !== 1 ? "s" : ""} uploaded</p>
+              <h2 className="text-[17px] font-semibold text-[#252525]">Previous Mappings</h2>
+              <p className="text-[12px] text-[#8c8885]">{sheets.length} answer sheet{sheets.length !== 1 ? "s" : ""} uploaded</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-[#f0f0f0] flex items-center justify-center text-[#8c8c8c] hover:text-[#1a1a1a] transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[#8c8885] transition-colors hover:bg-[#f0f0f0] hover:text-[#252525]"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -569,21 +515,21 @@ function PreviousMappingsModal({ examId, sheets, loading, onClose }: PreviousMap
         </div>
 
         {/* Body List */}
-        <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-2.5 min-h-[160px]">
+        <div className="flex min-h-40 flex-1 flex-col gap-2.5 overflow-y-auto py-4">
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-[#8c8c8c] text-[13px] gap-2">
+            <div className="flex items-center justify-center gap-2 py-12 text-[13px] text-[#8c8885]">
               <SpinnerIcon size={16} /> Loading uploads…
             </div>
           ) : sheets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-[#8c8c8c]">
-              <div className="w-12 h-12 rounded-full bg-[#f5f5f5] flex items-center justify-center mb-3 text-[#b0b0b0]">
+            <div className="flex flex-col items-center justify-center py-12 text-center text-[#8c8885]">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#f5f5f5] text-[#b0b0b0]">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <rect x="4" y="2" width="16" height="20" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
                   <path d="M8 8H16M8 12H16M8 16H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="text-[14px] font-semibold text-[#1a1a1a]">No previous uploads</p>
-              <p className="text-[12px] text-[#8c8c8c] mt-0.5">Uploaded answer sheets will show up here</p>
+              <p className="text-[14px] font-semibold text-[#252525]">No previous uploads</p>
+              <p className="mt-0.5 text-[12px] text-[#8c8885]">Uploaded answer sheets will show up here</p>
             </div>
           ) : (
             sheets.map((sheet) => {
@@ -595,15 +541,15 @@ function PreviousMappingsModal({ examId, sheets, loading, onClose }: PreviousMap
               return (
                 <div
                   key={sheet._id}
-                  className="flex items-center justify-between gap-3 p-3.5 rounded-[14px] bg-[#fafafa] hover:bg-[#f4f4f4] border border-[#eee] transition-all"
+                  className="flex items-center justify-between gap-3 rounded-[11px] border border-[#eee9e6] bg-[#fcfbfa] p-3.5 transition-all hover:bg-[#f6f4f3]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-white border border-[#e0e0e0] flex items-center justify-center font-bold text-[13px] text-[#303030] shrink-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#e0e0e0] bg-white text-[13px] font-bold text-[#303030]">
                       {rollNo ? rollNo.slice(-3) : "—"}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-[#1a1a1a] truncate">{title}</p>
-                      <div className="flex items-center gap-2 text-[11px] text-[#8c8c8c]">
+                      <p className="truncate text-[13px] font-semibold text-[#252525]">{title}</p>
+                      <div className="flex items-center gap-2 text-[11px] text-[#8c8885]">
                         {rollNo && <span>Serial #{rollNo}</span>}
                         {sheet.pageCount && <span>· {sheet.pageCount} page{sheet.pageCount > 1 ? "s" : ""}</span>}
                         {sheet.totalScore !== undefined && (
@@ -614,7 +560,7 @@ function PreviousMappingsModal({ examId, sheets, loading, onClose }: PreviousMap
                   </div>
 
                   <div className="flex items-center gap-2.5 shrink-0">
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusCfg.color}`}>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusCfg.color}`}>
                       {statusCfg.label}
                     </span>
                     <button
@@ -622,7 +568,7 @@ function PreviousMappingsModal({ examId, sheets, loading, onClose }: PreviousMap
                         onClose();
                         navigate(`/exams/${examId}/answer-sheets/${sheet._id}/mapping`);
                       }}
-                      className="px-3 py-1.5 rounded-[10px] bg-[#303030] hover:bg-[#1a1a1a] text-white text-[12px] font-semibold transition-colors flex items-center gap-1"
+                      className="flex items-center gap-1 rounded-lg bg-[#303030] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#1a1a1a]"
                     >
                       <span>View</span>
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -637,97 +583,16 @@ function PreviousMappingsModal({ examId, sheets, loading, onClose }: PreviousMap
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-[#f0f0f0] flex justify-end shrink-0">
+        <div className="flex shrink-0 justify-end border-t border-[#f0f0f0] pt-3">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-[10px] bg-[#f0f0f0] hover:bg-[#e4e4e4] text-[13px] font-semibold text-[#444] transition-colors"
+            className="rounded-lg bg-[#f0f0f0] px-5 py-2 text-[13px] font-semibold text-[#444] transition-colors hover:bg-[#e4e4e4]"
           >
             Close
           </button>
         </div>
       </div>
     </div>
-  );
-}
-
-// ── Sidebar Component ─────────────────────────────────────────────────────────
-
-function Sidebar() {
-  const navigate = useNavigate();
-
-  return (
-    <aside className="w-[240px] shrink-0 flex flex-col bg-white shadow-[4px_0_24px_rgba(0,0,0,0.05)] z-10 rounded-r-[24px]">
-      {/* Brand */}
-      <div className="flex items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[#303030] rounded-[9px] flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8L7 12L13 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span className="font-extrabold text-[#1a1a1a] text-[17px] tracking-tight">VedaAI</span>
-        </div>
-        <button className="text-[#8c8c8c] hover:text-[#1a1a1a]">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M6 2V14" stroke="currentColor" strokeWidth="1.3" />
-          </svg>
-        </button>
-      </div>
-
-      {/* AI Teacher's Toolkit pill */}
-      <div className="px-5 mb-5">
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#303030] text-white rounded-[14px] text-[13px] font-bold shadow-sm border border-[#FF5623]/30">
-          <span className="text-[#FF5623] text-sm">✦</span>
-          AI Teacher's Toolkit
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-4 flex flex-col gap-1 text-[14px]">
-        {[
-          { label: "Home", to: "/exams", icon: "⊞" },
-          { label: "My Classroom", to: "/classrooms", icon: "👥" },
-          { label: "Assignments", to: "/exams", icon: "📄" },
-          { label: "Exams", to: "/exams", active: true, icon: "📋" },
-          { label: "My Library", to: "/exams", icon: "⏱" },
-        ].map((item) => (
-          <button
-            key={item.label}
-            onClick={() => navigate(item.to)}
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] font-medium transition-colors text-left ${
-              item.active
-                ? "bg-[#f2f2f2] text-[#1a1a1a] font-bold"
-                : "text-[#6b6b6b] hover:bg-[#f8f8f8] hover:text-[#1a1a1a]"
-            }`}
-          >
-            <span className="text-base leading-none">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Bottom Info: School Card */}
-      <div className="p-4 border-t border-[#f0f0f0] flex flex-col gap-3">
-        <button className="flex items-center gap-2.5 text-[13px] text-[#6b6b6b] hover:text-[#1a1a1a] px-2 py-1">
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M8 1V3M8 13V15M1 8H3M13 8H15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          Settings
-        </button>
-
-        <div className="flex items-center gap-3 p-2.5 rounded-[14px] bg-[#f5f5f5]">
-          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[11px] font-bold border border-[#e0e0e0] text-green-700">
-            DPS
-          </div>
-          <div className="min-w-0">
-            <p className="text-[12px] font-bold text-[#1a1a1a] truncate leading-tight">Delhi Public School</p>
-            <p className="text-[10px] text-[#8c8c8c] truncate">Bokaro Steel City</p>
-          </div>
-        </div>
-      </div>
-    </aside>
   );
 }
 
