@@ -11,7 +11,8 @@ import {
   type Grade,
   type AnswerRegion,
 } from "@/lib/api";
-import Sidebar, { HamburgerButton } from "@/components/Sidebar";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
 
 
@@ -198,9 +199,8 @@ function QuestionCard({
 
   return (
     <div
-      className={`bg-white rounded-[14px] p-4 transition-all border ${
-        selected ? "border-[#FF5623] shadow-[0_0_0_2px_rgba(255,86,35,0.12)]" : "border-[#f0f0f0]"
-      }`}
+      className={`bg-white rounded-[14px] p-4 transition-all border ${selected ? "border-[#FF5623] shadow-[0_0_0_2px_rgba(255,86,35,0.12)]" : "border-[#f0f0f0]"
+        }`}
     >
       <div className="flex items-start gap-3">
         {/* Question badge */}
@@ -384,6 +384,13 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
 // â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function MappingPage() {
+  const SPLIT_PADDING = 12;
+  const SPLIT_GAP = 12;
+  const RESIZER_WIDTH = 8;
+  const DEFAULT_QUESTION_PANEL_WIDTH = 340;
+  const MIN_QUESTION_PANEL_WIDTH = 280;
+  const MAX_QUESTION_PANEL_WIDTH = 560;
+  const MIN_ANSWER_PANEL_WIDTH = 360;
   const { examId, sheetId } = useParams<{ examId: string; sheetId: string }>();
   const navigate = useNavigate();
   const { isOpen, setIsOpen } = useSidebar();
@@ -398,7 +405,66 @@ export default function MappingPage() {
   const [grading, setGrading] = useState(false);
   const [gradingError, setGradingError] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [questionPanelWidth, setQuestionPanelWidth] = useState(DEFAULT_QUESTION_PANEL_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const splitViewRef = useRef<HTMLDivElement>(null);
+  const resizeOffsetRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function getQuestionPanelBounds() {
+    const splitViewWidth = splitViewRef.current?.getBoundingClientRect().width ?? 0;
+    const availableMax = splitViewWidth > 0
+      ? splitViewWidth - (SPLIT_PADDING * 2) - (SPLIT_GAP * 2) - RESIZER_WIDTH - MIN_ANSWER_PANEL_WIDTH
+      : MAX_QUESTION_PANEL_WIDTH;
+    return {
+      min: MIN_QUESTION_PANEL_WIDTH,
+      max: Math.max(MIN_QUESTION_PANEL_WIDTH, Math.min(MAX_QUESTION_PANEL_WIDTH, availableMax)),
+    };
+  }
+
+  function clampQuestionPanelWidth(width: number) {
+    const bounds = getQuestionPanelBounds();
+    return Math.min(bounds.max, Math.max(bounds.min, width));
+  }
+
+  function handleResizeStart(event: React.PointerEvent<HTMLDivElement>) {
+    const dividerRect = event.currentTarget.getBoundingClientRect();
+    resizeOffsetRef.current = event.clientX - (dividerRect.left + dividerRect.width / 2);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsResizing(true);
+  }
+
+  function handleResizeMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!isResizing || !splitViewRef.current) return;
+    const splitViewLeft = splitViewRef.current.getBoundingClientRect().left;
+    const dividerCenterOffset = SPLIT_PADDING + SPLIT_GAP + RESIZER_WIDTH / 2;
+    setQuestionPanelWidth(
+      clampQuestionPanelWidth(event.clientX - splitViewLeft - dividerCenterOffset - resizeOffsetRef.current)
+    );
+  }
+
+  function handleResizeEnd(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsResizing(false);
+  }
+
+  function handleResizeKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const bounds = getQuestionPanelBounds();
+    const step = 16;
+    let nextWidth: number | null = null;
+
+    if (event.key === "ArrowLeft") nextWidth = questionPanelWidth - step;
+    if (event.key === "ArrowRight") nextWidth = questionPanelWidth + step;
+    if (event.key === "Home") nextWidth = bounds.min;
+    if (event.key === "End") nextWidth = bounds.max;
+
+    if (nextWidth !== null) {
+      event.preventDefault();
+      setQuestionPanelWidth(clampQuestionPanelWidth(nextWidth));
+    }
+  }
 
   useEffect(() => {
     if (!examId || !sheetId) return;
@@ -526,9 +592,9 @@ export default function MappingPage() {
     setPayload((prev) =>
       prev
         ? {
-            ...prev,
-            answerRegions: prev.answerRegions.map((r) => (r._id === regionId ? updated : r)),
-          }
+          ...prev,
+          answerRegions: prev.answerRegions.map((r) => (r._id === regionId ? updated : r)),
+        }
         : prev
     );
   }
@@ -575,7 +641,7 @@ export default function MappingPage() {
   return (
     <div className="flex size-full bg-gradient-to-b from-[#eee] to-[#dadada] overflow-hidden">
       {/* Shared sidebar â€“ collapsed on desktop, drawer on mobile */}
-      <div className="hidden lg:flex h-full">
+      <div className="hidden h-full p-3 lg:flex">
         <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
       </div>
       <div className="lg:hidden">
@@ -584,42 +650,33 @@ export default function MappingPage() {
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top nav */}
-        <header className="h-14 flex items-center justify-between px-4 md:px-5 bg-white/70 backdrop-blur-md border-b border-white/60 shrink-0">
-          <div className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
-            <HamburgerButton onClick={() => setMobileOpen(true)} />
-            <button onClick={() => navigate("/exams")} className="hover:text-[#1a1a1a] flex items-center gap-1">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              Exams
-            </button>
-            <span>â€º</span>
-            <span className="text-[#1a1a1a] font-medium">
-              {typeof answerSheet.exam === "object" ? answerSheet.exam.title : "Answer Sheet"}
-            </span>
-            {answerSheet.student && (
-              <><span>â€º</span><span className="text-[#1a1a1a]">{answerSheet.student.name}</span></>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {isMapped && (
-              <button
-                onClick={handleGrade}
-                disabled={grading}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF5623] text-white rounded-full text-[13px] font-semibold hover:bg-[#e04e1f] disabled:opacity-60 transition-colors"
-              >
-                {grading ? <><SpinnerIcon size={12} /> Gradingâ€¦</> : "Grade this sheet"}
-              </button>
-            )}
-            {gradingError && (
-              <span className="text-[12px] text-red-600">{gradingError}</span>
-            )}
-          </div>
-        </header>
+        <TopBar
+          title={<>{typeof answerSheet.exam === "object" ? answerSheet.exam.title : "Answer Sheet"}{answerSheet.student && <span className="ml-1 text-[#8c8c8c]">/ {answerSheet.student.name}</span>}</>}
+          showBack
+          mobileMenuOpen={() => setMobileOpen(true)}
+          actions={
+            <>
+              {isMapped && (
+                <button
+                  onClick={handleGrade}
+                  disabled={grading}
+                  className="flex items-center gap-1.5 rounded-full bg-[#FF5623] px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#e04e1f] disabled:opacity-60"
+                >
+                  {grading ? <><SpinnerIcon size={12} /> Grading...</> : "Grade this sheet"}
+                </button>
+              )}
+              {gradingError && <span className="hidden text-[12px] text-red-600 sm:inline">{gradingError}</span>}
+            </>
+          }
+        />
 
         {/* Split view */}
-        <div className="flex-1 flex gap-3 p-3 overflow-hidden min-h-0">
+        <div ref={splitViewRef} className={`flex-1 flex gap-3 p-3 overflow-hidden min-h-0 ${isResizing ? "select-none" : ""}`}>
           {/* Left: question panel */}
-          <div className="w-[340px] shrink-0 flex flex-col gap-3 overflow-hidden">
+          <div
+            className="shrink-0 flex flex-col gap-3 overflow-hidden"
+            style={{ width: questionPanelWidth }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between bg-white/70 rounded-[14px] px-4 py-3 backdrop-blur">
               <p className="text-[13px] font-bold text-[#303030]">Extracted Questions</p>
@@ -685,6 +742,24 @@ export default function MappingPage() {
             </div>
           </div>
 
+          <div
+            role="separator"
+            aria-label="Resize question and answer panels"
+            aria-orientation="vertical"
+            aria-valuemin={getQuestionPanelBounds().min}
+            aria-valuemax={getQuestionPanelBounds().max}
+            aria-valuenow={questionPanelWidth}
+            tabIndex={0}
+            onPointerDown={handleResizeStart}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeEnd}
+            onPointerCancel={handleResizeEnd}
+            onKeyDown={handleResizeKeyDown}
+            className={`group relative w-2 shrink-0 cursor-col-resize touch-none rounded-full outline-none transition-colors hover:bg-[#ff5623]/20 focus-visible:bg-[#ff5623]/20 ${isResizing ? "bg-[#ff5623]/20" : ""}`}
+          >
+            <span className="absolute left-1/2 top-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#bdbdbd] transition-colors group-hover:bg-[#ff5623] group-focus-visible:bg-[#ff5623]" />
+          </div>
+
           {/* Right: answer sheet viewer */}
           <div className="flex-1 flex flex-col rounded-[20px] overflow-hidden bg-[#303030] min-w-0">
             {/* Right panel header */}
@@ -696,7 +771,7 @@ export default function MappingPage() {
                   <button
                     onClick={() => setZoom((z) => Math.max(50, z - 10))}
                     className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
-                  >âˆ’</button>
+                  >-</button>
                   <span className="text-white/70 text-[12px] w-10 text-center">{zoom}%</span>
                   <button
                     onClick={() => setZoom((z) => Math.min(150, z + 10))}
