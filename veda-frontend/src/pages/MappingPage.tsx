@@ -16,7 +16,7 @@ import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
 
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function markColor(grade?: Grade): string {
   if (!grade) return "bg-[#e8e8e8] text-[#6b6b6b]";
@@ -30,7 +30,7 @@ function pct(val: number, max: number) {
   return Math.round((val / max) * 100);
 }
 
-// â”€â”€ Canvas highlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Canvas highlight ──────────────────────────────────────────────────────────
 
 function drawHighlight(
   canvas: HTMLCanvasElement,
@@ -65,19 +65,31 @@ function drawHighlight(
       ctx.lineWidth = 2.5;
       ctx.fillStyle = fillColor;
       ctx.beginPath();
-      ctx.rect(cx, cy, cw, ch);
+      ctx.roundRect(cx, cy, cw, ch, 16);
       ctx.fill();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 4.5;
+      ctx.stroke();
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
       // Label tab
-      const tabW = 32, tabH = 18;
+      const tabW = 48, tabH = 28, tabRadius = tabH / 2, tabOffsetX = 16;
+      const tabX = cx + tabOffsetX;
       ctx.fillStyle = strokeColor;
       ctx.beginPath();
-      ctx.rect(cx, cy - tabH, tabW, tabH);
+      ctx.moveTo(tabX, cy);
+      ctx.lineTo(tabX, cy - tabH + tabRadius);
+      ctx.arc(tabX + tabRadius, cy - tabH + tabRadius, tabRadius, Math.PI, Math.PI * 1.5);
+      ctx.lineTo(tabX + tabW - tabRadius, cy - tabH);
+      ctx.arc(tabX + tabW - tabRadius, cy - tabH + tabRadius, tabRadius, Math.PI * 1.5, 0);
+      ctx.lineTo(tabX + tabW, cy);
+      ctx.closePath();
       ctx.fill();
       ctx.fillStyle = "white";
-      ctx.font = "bold 11px sans-serif";
-      ctx.fillText(`Q${region.questionRef ?? "?"}`, cx + 4, cy - 5);
+      ctx.font = "bold 16px 'Bricolage Grotesque', sans-serif";
+      ctx.fillText(`${region.questionRef ?? "?"}`, tabX + 12, cy - 8);
     }
   }
 }
@@ -145,7 +157,7 @@ function PageImage({ src, pageIndex, regions, grade }: PageImageProps) {
   );
 }
 
-// â”€â”€ Question card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Question card ─────────────────────────────────────────────────────────────
 
 interface QuestionCardProps {
   question: Question;
@@ -319,7 +331,7 @@ function QuestionCard({
   );
 }
 
-// â”€â”€ Summary panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Summary panel ─────────────────────────────────────────────────────────────
 
 function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summary"]> }) {
   const p = summary.percentage;
@@ -381,7 +393,7 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
   );
 }
 
-// â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function MappingPage() {
   const SPLIT_PADDING = 12;
