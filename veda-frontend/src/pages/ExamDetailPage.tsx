@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { convertFileToPngList } from "@/lib/pdfToImages";
 import mappingGraphic from "@/assets/graphics/mapping.png";
+import sparkleLoader from "@/assets/graphics/sparkle-loader.webm";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
@@ -64,7 +65,6 @@ export default function ExamDetailPage() {
 
   // Submitting state
   const [submitting, setSubmitting] = useState(false);
-  const [progressText, setProgressText] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   // Previous mappings
@@ -129,22 +129,17 @@ export default function ExamDetailPage() {
     if (!examId || !canStart) return;
 
     setSubmitting(true);
-    setProgressText("Preparing documents…");
     setSubmitError("");
 
     try {
       // 1. Convert and upload question paper if newly chosen
       if (qpFile) {
-        setProgressText("Converting Question Paper PDF to PNG…");
-        const qpPages = await convertFileToPngList(qpFile, (msg) => setProgressText(msg));
-        setProgressText("Uploading Question Paper to DeepSeek Vision…");
+        const qpPages = await convertFileToPngList(qpFile);
         await uploadQuestionPaper(examId, qpPages);
       }
 
       // 2. Convert and upload answer sheet
-      setProgressText("Converting Answer Sheet PDF to PNG…");
-      const asPages = await convertFileToPngList(asFile!, (msg) => setProgressText(msg));
-      setProgressText("Uploading Answer Sheet to DeepSeek Vision…");
+      const asPages = await convertFileToPngList(asFile!);
       const result = await uploadAnswerSheet(
         examId,
         serialNo.trim(),
@@ -165,7 +160,6 @@ export default function ExamDetailPage() {
     } catch (e) {
       setSubmitError((e as Error).message ?? "Mapping failed. Please check inputs and try again.");
       setSubmitting(false);
-      setProgressText("");
     }
   }
 
@@ -192,6 +186,54 @@ export default function ExamDetailPage() {
           >
             Back to Exams
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitting) {
+    return (
+      <div className="flex h-screen w-full overflow-hidden bg-[#f3f2f1] text-[#252525]">
+        <div className="hidden h-full p-3 lg:flex">
+          <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
+        </div>
+        <div className="lg:hidden">
+          <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <TopBar
+            title={<>{exam.title}{exam.subject && <span className="ml-1 text-[13px] text-[#8c8c8c]">({exam.subject})</span>}</>}
+            showBack
+            mobileMenuOpen={() => setMobileOpen(true)}
+          />
+
+          <main className="flex flex-1 items-center justify-center bg-[#f3f2f1]">
+            <div className="flex flex-col items-center gap-5">
+              <video
+                src={sparkleLoader}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="h-28 w-28 object-contain drop-shadow-[0_10px_24px_rgba(255,86,35,0.18)]"
+              />
+              <div className="text-center">
+                <p
+                  className="loading-shimmer-black text-[20px] font-bold tracking-[-0.04em] text-[#1a1a1a] sm:text-[22px]"
+                  style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+                >
+                  Extracting...
+                </p>
+                <p
+                  className="mt-1 text-[14px] text-[#6b6b6b]"
+                  style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+                >
+                  This may take a while
+                </p>
+              </div>
+            </div>
+          </main>
         </div>
       </div>
     );
@@ -322,19 +364,10 @@ export default function ExamDetailPage() {
               disabled={!canStart}
               className="flex items-center gap-2 rounded-full bg-[#303030] px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_5px_12px_rgba(48,48,48,0.18)] transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 sm:gap-2.5 sm:px-7 sm:py-3 sm:text-[14px]"
             >
-              {submitting ? (
-                <>
-                  <SpinnerIcon size={16} />
-                  <span>{progressText || "Processing Document & Answers…"}</span>
-                </>
-              ) : (
-                <>
-                  <span>Start Mapping</span>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8H13M9 4L13 8L9 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </>
-              )}
+              <span>Start Mapping</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M9 4L13 8L9 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
 
             <p className="max-w-[28rem] text-center text-[11px] text-[#8c8885] sm:text-[12px]">

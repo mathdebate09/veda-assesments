@@ -7,7 +7,6 @@ import ExamsListPage from "@/pages/ExamsListPage";
 import ExamDetailPage from "@/pages/ExamDetailPage";
 import ClassroomsPage from "@/pages/ClassroomsPage";
 import ClassroomDetailPage from "@/pages/ClassroomDetailPage";
-import LoadingPage from "@/pages/LoadingPage";
 import MappingPage from "@/pages/MappingPage";
 import AssignmentsPage from "@/pages/AssignmentsPage";
 import LibraryPage from "@/pages/LibraryPage";
@@ -27,7 +26,6 @@ export default function App() {
             <Route path="/exams" element={<ExamsListPage />} />
             <Route path="/exams/:examId" element={<ExamDetailPage />} />
             <Route path="/exams/:examId/upload" element={<ExamDetailPage />} />
-            <Route path="/exams/:examId/loading" element={<LoadingPage />} />
             <Route
               path="/exams/:examId/answer-sheets/:sheetId/mapping"
               element={<MappingPage />}

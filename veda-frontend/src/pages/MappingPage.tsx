@@ -42,14 +42,19 @@ function drawHighlight(
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const VERTICAL_OFFSET = 0.12; // 12% downward vertical drag
+
   for (const region of regions) {
     for (const seg of region.segments) {
       if (seg.pageIndex !== pageIndex) continue;
       const { x, y, width, height } = seg.boundingBox;
+      const adjustedY = Math.min(1 - Math.min(height, 0.95), Math.max(0, y + VERTICAL_OFFSET));
+      const adjustedHeight = Math.min(height, 1 - adjustedY);
+
       const cx = x * canvas.width;
-      const cy = y * canvas.height;
+      const cy = adjustedY * canvas.height;
       const cw = width * canvas.width;
-      const ch = height * canvas.height;
+      const ch = adjustedHeight * canvas.height;
 
       let strokeColor = "#F97316";
       let fillColor = "rgba(249,115,22,0.12)";
@@ -168,11 +173,6 @@ interface QuestionCardProps {
   onSelect: () => void;
   onToggleExpand: () => void;
   onSaveGrade: (gradeId: string, marks: number) => Promise<void>;
-  examId: string;
-  sheetId: string;
-  allQuestions: Question[];
-  unmatchedRegions: AnswerRegion[];
-  onAssign: (regionId: string, questionId: string) => void;
 }
 
 function QuestionCard({
@@ -184,8 +184,6 @@ function QuestionCard({
   onSelect,
   onToggleExpand,
   onSaveGrade,
-  allQuestions,
-  unmatchedRegions,
 }: QuestionCardProps) {
   const [editMarks, setEditMarks] = useState<string>("");
   const [savingGrade, setSavingGrade] = useState(false);
@@ -233,7 +231,7 @@ function QuestionCard({
 
         {/* Marks badge */}
         <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${colorClass}`}>
-          {grade ? `${grade.teacherOverride ?? grade.marksAwarded}/${grade.maxMarks}` : `â€”/${question.maxMarks}`}
+          {grade ? `${grade.teacherOverride ?? grade.marksAwarded}/${grade.maxMarks}` : `-/${question.maxMarks}`}
         </span>
 
         {/* Expand chevron */}
@@ -283,7 +281,7 @@ function QuestionCard({
                 className="w-16 h-7 px-2 text-[13px] border border-[#e0e0e0] rounded-[6px] outline-none focus:border-[#FF5623] transition-colors"
               />
               <span className="text-[12px] text-[#9b9b9b]">/ {grade.maxMarks}</span>
-              {savingGrade && <span className="text-[11px] text-[#9b9b9b]">Savingâ€¦</span>}
+              {savingGrade && <span className="text-[11px] text-[#9b9b9b]">Saving...</span>}
             </div>
           )}
         </div>
@@ -303,28 +301,6 @@ function QuestionCard({
       {selected && !region && (
         <div className="mt-3 pt-3 border-t border-[#f5f5f5] text-[13px] text-[#9b9b9b] italic">
           No answer region found for this question.
-        </div>
-      )}
-
-      {/* Unmatched region assign (shown on expanded) */}
-      {expanded && unmatchedRegions.length > 0 && (
-        <div className="mt-2">
-          <p className="text-[11px] font-semibold text-[#6b6b6b] uppercase tracking-wide mb-1">Assign unmatched answer</p>
-          <select
-            className="text-[12px] border border-[#e0e0e0] rounded-[6px] px-2 py-1 outline-none focus:border-[#FF5623]"
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value) {
-                // handled by parent
-                e.target.value = "";
-              }
-            }}
-          >
-            <option value="">Select unmatched regionâ€¦</option>
-            {unmatchedRegions.map((r) => (
-              <option key={r._id} value={r._id}>{r.extractedText.slice(0, 60)}â€¦</option>
-            ))}
-          </select>
         </div>
       )}
     </div>
@@ -408,6 +384,10 @@ export default function MappingPage() {
   const { isOpen, setIsOpen } = useSidebar();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    setIsOpen(false);
+  }, [setIsOpen]);
+
   const [payload, setPayload] = useState<SplitViewPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -416,11 +396,14 @@ export default function MappingPage() {
   const [zoom, setZoom] = useState(100);
   const [grading, setGrading] = useState(false);
   const [gradingError, setGradingError] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
+  const [visiblePage, setVisiblePage] = useState(0);
   const [mobileView, setMobileView] = useState<"questions" | "sheet">("questions");
   const [questionPanelWidth, setQuestionPanelWidth] = useState(DEFAULT_QUESTION_PANEL_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const splitViewRef = useRef<HTMLDivElement>(null);
+  const desktopScrollContainerRef = useRef<HTMLDivElement>(null);
+  const mobileScrollContainerRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const resizeOffsetRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -565,15 +548,27 @@ export default function MappingPage() {
   const activeRegions = activeRegion ? [activeRegion] : [];
   const activeGrade = selectedQ ? findGradeForQuestion(selectedQ) : undefined;
 
-  // Jump to the page of the selected question's answer segment
+  const scrollToTarget = useCallback((targetPageIndex: number, relativeY?: number) => {
+    const pageEl = pageRefs.current.get(targetPageIndex);
+    if (!pageEl) return;
+    const adjustedRelativeY = typeof relativeY === "number" ? Math.min(0.95, relativeY + 0.12) : 0;
+    const yOffset = adjustedRelativeY * pageEl.offsetHeight;
+    const targetTop = Math.max(0, pageEl.offsetTop + yOffset - 32);
+
+    desktopScrollContainerRef.current?.scrollTo({ top: targetTop, behavior: "smooth" });
+    mobileScrollContainerRef.current?.scrollTo({ top: targetTop, behavior: "smooth" });
+    setVisiblePage(targetPageIndex);
+  }, []);
+
+  // Smoothly scroll to the page/position of the selected question's answer segment
   useEffect(() => {
     if (activeRegion && activeRegion.segments && activeRegion.segments.length > 0) {
       const firstSeg = activeRegion.segments[0];
       if (typeof firstSeg.pageIndex === "number" && firstSeg.pageIndex >= 0) {
-        setCurrentPage(firstSeg.pageIndex);
+        scrollToTarget(firstSeg.pageIndex, firstSeg.boundingBox?.y);
       }
     }
-  }, [activeSelectedQId, activeRegion]);
+  }, [activeSelectedQId, activeRegion, scrollToTarget]);
 
   async function handleGrade() {
     if (!examId || !sheetId) return;
@@ -617,7 +612,7 @@ export default function MappingPage() {
       <div className="size-full flex items-center justify-center bg-gradient-to-b from-[#eee] to-[#dadada]">
         <div className="flex flex-col items-center gap-3">
           <SpinnerIcon size={32} />
-          <p className="text-[14px] text-[#6b6b6b]">Loading answer sheetâ€¦</p>
+          <p className="text-[14px] text-[#6b6b6b]">Loading answer sheet...</p>
         </div>
       </div>
     );
@@ -640,12 +635,7 @@ export default function MappingPage() {
     );
   }
 
-  const { answerSheet, questions, answerRegions, summary } = payload;
-  const unmatchedRegions = answerRegions.filter((r) => {
-    if (r.isUnmatched) return true;
-    return !questions.some((q) => findRegionForQuestion(q)?._id === r._id);
-  });
-
+  const { answerSheet, questions, summary } = payload;
   const pageImages = answerSheet.pageImages ?? [];
   const pageCount = pageImages.length;
   const isGraded = answerSheet.status === "graded";
@@ -653,7 +643,7 @@ export default function MappingPage() {
 
   return (
     <div className="flex size-full bg-gradient-to-b from-[#eee] to-[#dadada] overflow-hidden">
-      {/* Shared sidebar â€“ collapsed on desktop, drawer on mobile */}
+      {/* Shared sidebar - collapsed on desktop, drawer on mobile */}
       <div className="hidden h-full p-3 lg:flex">
         <Sidebar collapsed={!isOpen} onToggle={() => setIsOpen(!isOpen)} />
       </div>
@@ -694,8 +684,8 @@ export default function MappingPage() {
                 type="button"
                 onClick={() => setMobileView(tab.key)}
                 className={`flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${mobileView === tab.key
-                    ? "bg-[#2c2c2c] text-white shadow-sm"
-                    : "text-[#3b3b3b]"
+                  ? "bg-[#2c2c2c] text-white shadow-sm"
+                  : "text-[#3b3b3b]"
                   }`}
               >
                 {tab.label}
@@ -735,39 +725,8 @@ export default function MappingPage() {
                     setExpandedQId((prev) => (prev === q._id ? null : q._id));
                   }}
                   onSaveGrade={handleSaveGrade}
-                  examId={examId!}
-                  sheetId={sheetId!}
-                  allQuestions={questions}
-                  unmatchedRegions={unmatchedRegions}
-                  onAssign={handleAssignRegion}
                 />
               ))}
-
-              {unmatchedRegions.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-4">
-                  <p className="text-[12px] font-bold text-amber-700 mb-2">
-                    Unmatched Answers ({unmatchedRegions.length})
-                  </p>
-                  {unmatchedRegions.map((r) => (
-                    <div key={r._id} className="mb-2 last:mb-0">
-                      <p className="text-[12px] text-[#303030] line-clamp-2 mb-1.5">{r.extractedText}</p>
-                      <select
-                        className="text-[12px] border border-amber-300 rounded-[6px] px-2 py-1 outline-none w-full bg-white"
-                        defaultValue=""
-                        onChange={(e) => {
-                          if (e.target.value) handleAssignRegion(r._id, e.target.value);
-                          e.target.value = "";
-                        }}
-                      >
-                        <option value="">Assign to question…</option>
-                        {questions.map((q) => (
-                          <option key={q._id} value={q._id}>Q{q.displayId}: {q.text.slice(0, 40)}</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {summary && isGraded && <SummaryPanel summary={summary} />}
             </div>
@@ -792,61 +751,104 @@ export default function MappingPage() {
           </div>
 
           <div className="flex-1 flex flex-col rounded-[20px] overflow-hidden bg-[#303030] min-w-0">
-            <div className="flex items-center justify-between px-5 py-3 shrink-0">
-              <span className="text-white text-[13px] font-semibold">Answer Sheet</span>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setZoom((z) => Math.max(50, z - 10))}
-                    className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
-                  >-</button>
-                  <span className="text-white/70 text-[12px] w-10 text-center">{zoom}%</span>
-                  <button
-                    onClick={() => setZoom((z) => Math.min(150, z + 10))}
-                    className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
-                  >+</button>
-                </div>
-
-                {pageCount > 0 && (
-                  <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between px-5 py-3 shrink-0 border-b border-white/10 bg-[#2b2b2b]">
+              <div className="flex items-center gap-2.5">
+                <span className="text-white text-[13px] font-semibold">Answer Sheet</span>
+                <span className="text-white/50 text-[11px] bg-white/10 px-2 py-0.5 rounded-full font-medium">
+                  {pageCount} {pageCount === 1 ? "page" : "pages"} (Continuous)
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                {pageCount > 1 && (
+                  <div className="flex items-center gap-1 bg-black/40 rounded-[8px] px-2 py-1 border border-white/10">
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                      disabled={currentPage === 0}
-                      className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white disabled:opacity-30"
+                      onClick={() => scrollToTarget(Math.max(0, visiblePage - 1))}
+                      disabled={visiblePage === 0}
+                      className="w-5 h-5 flex items-center justify-center text-white/70 hover:text-white disabled:opacity-30 transition-colors"
+                      title="Previous page"
                     >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </button>
-                    <span className="text-white/70 text-[12px] whitespace-nowrap">
-                      Page {currentPage + 1} of {pageCount}
+                    <span className="text-white/80 text-[12px] px-1 whitespace-nowrap font-medium">
+                      Page {visiblePage + 1} of {pageCount}
                     </span>
                     <button
-                      onClick={() => setCurrentPage((p) => Math.min(pageCount - 1, p + 1))}
-                      disabled={currentPage === pageCount - 1}
-                      className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white disabled:opacity-30"
+                      onClick={() => scrollToTarget(Math.min(pageCount - 1, visiblePage + 1))}
+                      disabled={visiblePage === pageCount - 1}
+                      className="w-5 h-5 flex items-center justify-center text-white/70 hover:text-white disabled:opacity-30 transition-colors"
+                      title="Next page"
                     >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2.5L9.5 7L5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 2.5L9.5 7L5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </button>
                   </div>
                 )}
+
+                <div className="flex items-center gap-1.5 bg-black/40 rounded-[8px] px-2 py-1 border border-white/10">
+                  <button
+                    onClick={() => setZoom((z) => Math.max(50, z - 10))}
+                    className="w-5 h-5 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                    title="Zoom out"
+                  >-</button>
+                  <span className="text-white/80 text-[12px] w-9 text-center font-medium">{zoom}%</span>
+                  <button
+                    onClick={() => setZoom((z) => Math.min(150, z + 10))}
+                    className="w-5 h-5 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                    title="Zoom in"
+                  >+</button>
+                </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto bg-white/10 p-4">
+            <div
+              ref={desktopScrollContainerRef}
+              onScroll={(e) => {
+                const container = e.currentTarget;
+                const containerTop = container.scrollTop;
+                const midPoint = containerTop + container.clientHeight / 3;
+                for (let i = 0; i < pageCount; i++) {
+                  const el = pageRefs.current.get(i);
+                  if (el) {
+                    const top = el.offsetTop;
+                    const bottom = top + el.offsetHeight;
+                    if (midPoint >= top && midPoint <= bottom) {
+                      setVisiblePage(i);
+                      break;
+                    }
+                  }
+                }
+              }}
+              className="flex-1 overflow-y-auto overflow-x-auto bg-[#1e1e1e]/60 p-4 scroll-smooth"
+            >
               {pageImages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-white/50 text-[14px]">
                   No page images available
                 </div>
               ) : (
                 <div
-                  style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
-                  className="transition-transform"
+                  style={{
+                    width: `${zoom}%`,
+                    maxWidth: zoom > 100 ? `${(zoom / 100) * 880}px` : "880px",
+                    margin: "0 auto",
+                  }}
+                  className="flex flex-col gap-0 items-center transition-all pb-12 shadow-2xl rounded-[10px] overflow-hidden"
                 >
-                  <PageImage
-                    src={pageImages[currentPage]}
-                    pageIndex={currentPage}
-                    regions={activeRegions}
-                    grade={activeGrade}
-                  />
+                  {pageImages.map((src, pageIndex) => (
+                    <div
+                      key={pageIndex}
+                      ref={(el) => {
+                        if (el) pageRefs.current.set(pageIndex, el);
+                        else pageRefs.current.delete(pageIndex);
+                      }}
+                      className="w-full flex flex-col items-center bg-white border-b border-black/15 last:border-b-0"
+                    >
+                      <PageImage
+                        src={src}
+                        pageIndex={pageIndex}
+                        regions={activeRegions}
+                        grade={activeGrade}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -878,95 +880,104 @@ export default function MappingPage() {
                     setExpandedQId((prev) => (prev === q._id ? null : q._id));
                   }}
                   onSaveGrade={handleSaveGrade}
-                  examId={examId!}
-                  sheetId={sheetId!}
-                  allQuestions={questions}
-                  unmatchedRegions={unmatchedRegions}
-                  onAssign={handleAssignRegion}
                 />
               ))}
-
-              {unmatchedRegions.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-4">
-                  <p className="text-[12px] font-bold text-amber-700 mb-2">
-                    Unmatched Answers ({unmatchedRegions.length})
-                  </p>
-                  {unmatchedRegions.map((r) => (
-                    <div key={r._id} className="mb-2 last:mb-0">
-                      <p className="text-[12px] text-[#303030] line-clamp-2 mb-1.5">{r.extractedText}</p>
-                      <select
-                        className="text-[12px] border border-amber-300 rounded-[6px] px-2 py-1 outline-none w-full bg-white"
-                        defaultValue=""
-                        onChange={(e) => {
-                          if (e.target.value) handleAssignRegion(r._id, e.target.value);
-                          e.target.value = "";
-                        }}
-                      >
-                        <option value="">Assign to question…</option>
-                        {questions.map((q) => (
-                          <option key={q._id} value={q._id}>Q{q.displayId}: {q.text.slice(0, 40)}</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {summary && isGraded && <SummaryPanel summary={summary} />}
             </div>
           ) : (
             <div className="flex-1 flex flex-col rounded-[18px] overflow-hidden bg-[#303030] min-w-0">
-              <div className="flex items-center justify-between px-4 py-3 shrink-0">
-                <span className="text-white text-[13px] font-semibold">Answer Sheet</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setZoom((z) => Math.max(50, z - 10))}
-                    className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
-                  >-</button>
-                  <span className="text-white/70 text-[12px] w-10 text-center">{zoom}%</span>
-                  <button
-                    onClick={() => setZoom((z) => Math.min(150, z + 10))}
-                    className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
-                  >+</button>
+              <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-white/10 bg-[#2b2b2b]">
+                <div className="flex items-center gap-2">
+                  <span className="text-white text-[13px] font-semibold">Answer Sheet</span>
+                  <span className="text-white/50 text-[11px] bg-white/10 px-2 py-0.5 rounded-full">
+                    {pageCount}p
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {pageCount > 1 && (
+                    <div className="flex items-center gap-1 bg-black/40 rounded-[6px] px-1.5 py-0.5 text-white/80 text-[11px]">
+                      <button
+                        onClick={() => scrollToTarget(Math.max(0, visiblePage - 1))}
+                        disabled={visiblePage === 0}
+                        className="w-4 h-4 flex items-center justify-center disabled:opacity-30"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </button>
+                      <span>{visiblePage + 1}/{pageCount}</span>
+                      <button
+                        onClick={() => scrollToTarget(Math.min(pageCount - 1, visiblePage + 1))}
+                        disabled={visiblePage === pageCount - 1}
+                        className="w-4 h-4 flex items-center justify-center disabled:opacity-30"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M5 2.5L9.5 7L5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1 bg-black/40 rounded-[6px] px-1.5 py-0.5 text-white/80 text-[11px]">
+                    <button
+                      onClick={() => setZoom((z) => Math.max(50, z - 10))}
+                      className="w-4 h-4 flex items-center justify-center text-white/70 hover:text-white"
+                    >-</button>
+                    <span className="w-7 text-center">{zoom}%</span>
+                    <button
+                      onClick={() => setZoom((z) => Math.min(150, z + 10))}
+                      className="w-4 h-4 flex items-center justify-center text-white/70 hover:text-white"
+                    >+</button>
+                  </div>
                 </div>
               </div>
 
-              {pageCount > 0 && (
-                <div className="flex items-center justify-center gap-2 border-t border-white/10 bg-[#353535] px-3 py-2 text-white/80 text-[11px]">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                    disabled={currentPage === 0}
-                    className="w-5 h-5 flex items-center justify-center disabled:opacity-30"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </button>
-                  <span>Page {currentPage + 1} of {pageCount}</span>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(pageCount - 1, p + 1))}
-                    disabled={currentPage === pageCount - 1}
-                    className="w-5 h-5 flex items-center justify-center disabled:opacity-30"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M5 2.5L9.5 7L5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </button>
-                </div>
-              )}
-
-              <div className="flex-1 overflow-auto bg-white/10 p-3">
+              <div
+                ref={mobileScrollContainerRef}
+                onScroll={(e) => {
+                  const container = e.currentTarget;
+                  const containerTop = container.scrollTop;
+                  const midPoint = containerTop + container.clientHeight / 3;
+                  for (let i = 0; i < pageCount; i++) {
+                    const el = pageRefs.current.get(i);
+                    if (el) {
+                      const top = el.offsetTop;
+                      const bottom = top + el.offsetHeight;
+                      if (midPoint >= top && midPoint <= bottom) {
+                        setVisiblePage(i);
+                        break;
+                      }
+                    }
+                  }
+                }}
+                className="flex-1 overflow-y-auto overflow-x-auto bg-[#1e1e1e]/60 p-3 scroll-smooth"
+              >
                 {pageImages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-white/50 text-[14px]">
                     No page images available
                   </div>
                 ) : (
                   <div
-                    style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
-                    className="transition-transform"
+                    style={{
+                      width: `${zoom}%`,
+                      margin: "0 auto",
+                    }}
+                    className="flex flex-col gap-0 items-center transition-all pb-8 rounded-[8px] overflow-hidden"
                   >
-                    <PageImage
-                      src={pageImages[currentPage]}
-                      pageIndex={currentPage}
-                      regions={activeRegions}
-                      grade={activeGrade}
-                    />
+                    {pageImages.map((src, pageIndex) => (
+                      <div
+                        key={pageIndex}
+                        ref={(el) => {
+                          if (el) pageRefs.current.set(pageIndex, el);
+                          else pageRefs.current.delete(pageIndex);
+                        }}
+                        className="w-full flex flex-col items-center bg-white border-b border-black/15 last:border-b-0"
+                      >
+                        <PageImage
+                          src={src}
+                          pageIndex={pageIndex}
+                          regions={activeRegions}
+                          grade={activeGrade}
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
