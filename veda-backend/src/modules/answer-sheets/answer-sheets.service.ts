@@ -246,7 +246,16 @@ export class AnswerSheetsService {
         ? await this.answerSheetsRepository.createRegions(regionsData)
         : [];
 
-    // 8. Return standardized response with both unified and legacy views
+    // 8. Auto-grade immediately so teacher opens fully graded and evaluated sheet
+    if (hasExtracted && questionsList.length > 0) {
+      try {
+        await this.gradeAnswerSheet(examId, answerSheet._id.toString());
+      } catch (err: any) {
+        this.logger.warn(`Auto-grading after extraction failed: ${err.message}`);
+      }
+    }
+
+    // 9. Return standardized response with both unified and legacy views
     return [
       {
         type: 'answer_sheet' as const,

@@ -1,10 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400;12..96,75..100,500;12..96,75..100,600;12..96,75..100,700;12..96,75..100,800&family=Inter:wght@500&display=swap');
-@import 'tailwindcss';
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400;12..96,75..100,500;12..96,75..100,600;12..96,75..100,700;12..96,75..100,800&family=Inter:wght@500&display=swap");
+@import "tailwindcss";
 
 html,
 body,
 #root {
   height: 100%;
+}
+
+.loading-shimmer-black {
+  background: linear-gradient(
+    110deg,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.96) 20%,
+    rgba(0, 0, 0, 0.18) 36%,
+    rgba(0, 0, 0, 0.92) 48%,
+    rgba(0, 0, 0, 0.18) 64%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: loadingShimmerBlack 1.75s ease-in-out infinite;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes loadingShimmerBlack {
+  0% {
+    background-position: 150% 0;
+    filter: brightness(0.92);
+  }
+  50% {
+    background-position: 50% 0;
+    filter: brightness(1.05);
+  }
+  100% {
+    background-position: -50% 0;
+    filter: brightness(0.92);
+  }
 }
 
 body {

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { EvaluationConfig, GradingConfig } from '../../config/ai.config';
+import { EvaluationConfig, getAiConfig, GradingConfig } from '../../config/ai.config';
 import { cleanJsonResponse } from '../../common/utils/ai.helpers';
 
 export interface GradeAnswerResult {
@@ -58,17 +58,8 @@ export class GradingService {
       this.configService.get<string>('deepseek.baseURL') ||
       'https://api.deepseek.com';
 
-    this.gradingConfig = this.configService.get<GradingConfig>('ai.grading') || {
-      model: process.env.DEEPSEEK_GRADING_MODEL || 'deepseek-v4-flash',
-      maxTokens: parseInt(process.env.GRADING_MAX_TOKENS || '50000', 10),
-      temperature: parseFloat(process.env.GRADING_TEMPERATURE || '0.1'),
-    };
-
-    this.evalConfig = this.configService.get<EvaluationConfig>('ai.evaluation') || {
-      model: process.env.DEEPSEEK_EVAL_MODEL || 'deepseek-v4-flash',
-      maxTokens: parseInt(process.env.SUMMARY_MAX_TOKENS || '50000', 10),
-      temperature: parseFloat(process.env.SUMMARY_TEMPERATURE || '0.3'),
-    };
+    this.gradingConfig = this.configService.get<GradingConfig>('ai.grading') ?? getAiConfig().grading;
+    this.evalConfig = this.configService.get<EvaluationConfig>('ai.evaluation') ?? getAiConfig().evaluation;
 
     this.client = new OpenAI({
       apiKey,
@@ -97,28 +88,29 @@ export class GradingService {
     }
 
     try {
-      const systemPrompt = `You are a strict but fair school exam evaluator.
-Given a question, the student's answer, and the maximum marks available,
-evaluate the answer and return a JSON object.
-Return ONLY valid JSON. No explanation, no markdown, no code fences.
-JSON shape: { marksAwarded: number, isCorrect: boolean, aiFeedback: string }
-marksAwarded must be between 0 and maxMarks.
-Partial credit is allowed for partially correct answers.
-aiFeedback should be 2-3 sentences: what was correct, what was missing.`;
+      const systemPrompt = this.gradingConfig.prompts.gradeAnswer;
 
       const userMessage = `Question: ${question.text}
 Maximum Marks: ${maxMarks}
 Student Answer: ${studentAnswer}`;
 
-      const response = await this.client.chat.completions.create({
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ];
+
+      const requestPayload: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
         model: this.gradingConfig.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
+        messages,
         max_tokens: this.gradingConfig.maxTokens,
         temperature: this.gradingConfig.temperature,
-      });
+      };
+
+      this.logger.log(
+        `[DeepSeek] gradeAnswer request payload: ${JSON.stringify(requestPayload)}`,
+      );
+
+      const response = await this.client.chat.completions.create(requestPayload);
 
       const rawContent = response.choices[0]?.message?.content || '';
       const cleaned = cleanJsonResponse(rawContent);
@@ -183,13 +175,7 @@ Student Answer: ${studentAnswer}`;
     }
 
     try {
-      const systemPrompt = `You are a teacher writing an end-of-exam performance report for a student.
-Return ONLY valid JSON. No explanation, no markdown, no code fences.
-JSON shape: {
-  "overallFeedback": string,
-  "strengths": string[],
-  "improvements": string[]
-}`;
+      const systemPrompt = this.evalConfig.prompts.generateSummary;
 
       const userMessage = `Here are the student's results:
 ${grades
@@ -199,15 +185,23 @@ ${grades
   )
   .join('\n')}`;
 
-      const response = await this.client.chat.completions.create({
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ];
+
+      const requestPayload: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
         model: this.evalConfig.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
+        messages,
         max_tokens: this.evalConfig.maxTokens,
         temperature: this.evalConfig.temperature,
-      });
+      };
+
+      this.logger.log(
+        `[DeepSeek] generateSummary request payload: ${JSON.stringify(requestPayload)}`,
+      );
+
+      const response = await this.client.chat.completions.create(requestPayload);
 
       const rawContent = response.choices[0]?.message?.content || '';
       const cleaned = cleanJsonResponse(rawContent);
