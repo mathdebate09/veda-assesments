@@ -371,7 +371,7 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
           <ul className="flex flex-col gap-1">
             {summary.strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-1.5 text-[12px] text-[#303030]">
-                <span className="text-green-500 mt-0.5">âœ“</span>{s}
+                <span className="text-green-500 mt-0.5">—</span>{s}
               </li>
             ))}
           </ul>
@@ -383,7 +383,7 @@ function SummaryPanel({ summary }: { summary: NonNullable<SplitViewPayload["summ
           <ul className="flex flex-col gap-1">
             {summary.improvements.map((s, i) => (
               <li key={i} className="flex items-start gap-1.5 text-[12px] text-[#303030]">
-                <span className="text-amber-500 mt-0.5">â†‘</span>{s}
+                <span className="text-amber-500 mt-0.5">—</span>{s}
               </li>
             ))}
           </ul>
@@ -417,6 +417,7 @@ export default function MappingPage() {
   const [grading, setGrading] = useState(false);
   const [gradingError, setGradingError] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [mobileView, setMobileView] = useState<"questions" | "sheet">("questions");
   const [questionPanelWidth, setQuestionPanelWidth] = useState(DEFAULT_QUESTION_PANEL_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const splitViewRef = useRef<HTMLDivElement>(null);
@@ -682,20 +683,40 @@ export default function MappingPage() {
           }
         />
 
-        {/* Split view */}
-        <div ref={splitViewRef} className={`flex-1 flex gap-3 p-3 overflow-hidden min-h-0 ${isResizing ? "select-none" : ""}`}>
-          {/* Left: question panel */}
+        <div className="lg:hidden px-3 pt-3">
+          <div className="mx-auto flex w-full max-w-85 items-center rounded-full bg-white p-1 shadow-[inset_0_1px_1px_rgba(0,0,0,0.08)]">
+            {([
+              { key: "questions", label: "Questions" },
+              { key: "sheet", label: "Answer Sheet" },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setMobileView(tab.key)}
+                className={`flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${mobileView === tab.key
+                    ? "bg-[#2c2c2c] text-white shadow-sm"
+                    : "text-[#3b3b3b]"
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          ref={splitViewRef}
+          className={`hidden flex-1 lg:flex gap-3 p-3 overflow-hidden min-h-0 ${isResizing ? "select-none" : ""}`}
+        >
           <div
             className="shrink-0 flex flex-col gap-3 overflow-hidden"
             style={{ width: questionPanelWidth }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between bg-white/70 rounded-[14px] px-4 py-3 backdrop-blur">
               <p className="text-[13px] font-bold text-[#303030]">Extracted Questions</p>
               <span className="text-[11px] text-[#9b9b9b]">{questions.length} questions</span>
             </div>
 
-            {/* Questions list */}
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
               {questions.map((q) => (
                 <QuestionCard
@@ -722,7 +743,6 @@ export default function MappingPage() {
                 />
               ))}
 
-              {/* Unmatched section */}
               {unmatchedRegions.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-4">
                   <p className="text-[12px] font-bold text-amber-700 mb-2">
@@ -739,7 +759,7 @@ export default function MappingPage() {
                           e.target.value = "";
                         }}
                       >
-                        <option value="">Assign to questionâ€¦</option>
+                        <option value="">Assign to question…</option>
                         {questions.map((q) => (
                           <option key={q._id} value={q._id}>Q{q.displayId}: {q.text.slice(0, 40)}</option>
                         ))}
@@ -749,7 +769,6 @@ export default function MappingPage() {
                 </div>
               )}
 
-              {/* Summary */}
               {summary && isGraded && <SummaryPanel summary={summary} />}
             </div>
           </div>
@@ -772,13 +791,10 @@ export default function MappingPage() {
             <span className="absolute left-1/2 top-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#bdbdbd] transition-colors group-hover:bg-[#ff5623] group-focus-visible:bg-[#ff5623]" />
           </div>
 
-          {/* Right: answer sheet viewer */}
           <div className="flex-1 flex flex-col rounded-[20px] overflow-hidden bg-[#303030] min-w-0">
-            {/* Right panel header */}
             <div className="flex items-center justify-between px-5 py-3 shrink-0">
               <span className="text-white text-[13px] font-semibold">Answer Sheet</span>
               <div className="flex items-center gap-4">
-                {/* Zoom */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setZoom((z) => Math.max(50, z - 10))}
@@ -790,7 +806,7 @@ export default function MappingPage() {
                     className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
                   >+</button>
                 </div>
-                {/* Page nav */}
+
                 {pageCount > 0 && (
                   <div className="flex items-center gap-2">
                     <button
@@ -815,7 +831,6 @@ export default function MappingPage() {
               </div>
             </div>
 
-            {/* Image area */}
             <div className="flex-1 overflow-auto bg-white/10 p-4">
               {pageImages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-white/50 text-[14px]">
@@ -836,6 +851,127 @@ export default function MappingPage() {
               )}
             </div>
           </div>
+        </div>
+
+        <div className="flex-1 flex flex-col gap-3 p-3 overflow-hidden min-h-0 lg:hidden">
+          {mobileView === "questions" ? (
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+              <div className="flex items-center justify-between bg-white/70 rounded-[14px] px-4 py-3 backdrop-blur">
+                <p className="text-[13px] font-bold text-[#303030]">Extracted Questions</p>
+                <span className="text-[11px] text-[#9b9b9b]">{questions.length} questions</span>
+              </div>
+
+              {questions.map((q) => (
+                <QuestionCard
+                  key={q._id}
+                  question={q}
+                  grade={findGradeForQuestion(q)}
+                  region={findRegionForQuestion(q)}
+                  selected={activeSelectedQId === q._id}
+                  expanded={expandedQId === q._id}
+                  onSelect={() => {
+                    setSelectedQId(q._id);
+                    setExpandedQId(q._id);
+                  }}
+                  onToggleExpand={() => {
+                    setSelectedQId(q._id);
+                    setExpandedQId((prev) => (prev === q._id ? null : q._id));
+                  }}
+                  onSaveGrade={handleSaveGrade}
+                  examId={examId!}
+                  sheetId={sheetId!}
+                  allQuestions={questions}
+                  unmatchedRegions={unmatchedRegions}
+                  onAssign={handleAssignRegion}
+                />
+              ))}
+
+              {unmatchedRegions.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-4">
+                  <p className="text-[12px] font-bold text-amber-700 mb-2">
+                    Unmatched Answers ({unmatchedRegions.length})
+                  </p>
+                  {unmatchedRegions.map((r) => (
+                    <div key={r._id} className="mb-2 last:mb-0">
+                      <p className="text-[12px] text-[#303030] line-clamp-2 mb-1.5">{r.extractedText}</p>
+                      <select
+                        className="text-[12px] border border-amber-300 rounded-[6px] px-2 py-1 outline-none w-full bg-white"
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) handleAssignRegion(r._id, e.target.value);
+                          e.target.value = "";
+                        }}
+                      >
+                        <option value="">Assign to question…</option>
+                        {questions.map((q) => (
+                          <option key={q._id} value={q._id}>Q{q.displayId}: {q.text.slice(0, 40)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {summary && isGraded && <SummaryPanel summary={summary} />}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col rounded-[18px] overflow-hidden bg-[#303030] min-w-0">
+              <div className="flex items-center justify-between px-4 py-3 shrink-0">
+                <span className="text-white text-[13px] font-semibold">Answer Sheet</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setZoom((z) => Math.max(50, z - 10))}
+                    className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
+                  >-</button>
+                  <span className="text-white/70 text-[12px] w-10 text-center">{zoom}%</span>
+                  <button
+                    onClick={() => setZoom((z) => Math.min(150, z + 10))}
+                    className="w-6 h-6 flex items-center justify-center text-white/70 hover:text-white"
+                  >+</button>
+                </div>
+              </div>
+
+              {pageCount > 0 && (
+                <div className="flex items-center justify-center gap-2 border-t border-white/10 bg-[#353535] px-3 py-2 text-white/80 text-[11px]">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                    className="w-5 h-5 flex items-center justify-center disabled:opacity-30"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M9 2.5L4.5 7L9 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </button>
+                  <span>Page {currentPage + 1} of {pageCount}</span>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={currentPage === pageCount - 1}
+                    className="w-5 h-5 flex items-center justify-center disabled:opacity-30"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M5 2.5L9.5 7L5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-auto bg-white/10 p-3">
+                {pageImages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-white/50 text-[14px]">
+                    No page images available
+                  </div>
+                ) : (
+                  <div
+                    style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
+                    className="transition-transform"
+                  >
+                    <PageImage
+                      src={pageImages[currentPage]}
+                      pageIndex={currentPage}
+                      regions={activeRegions}
+                      grade={activeGrade}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
