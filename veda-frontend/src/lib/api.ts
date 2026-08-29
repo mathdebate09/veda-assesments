@@ -38,7 +38,14 @@ export interface User {
   name: string;
   email: string;
   role: string;
-  institute?: { id: string; name: string; location: string };
+  institute?: {
+    _id: string;
+    name: string;
+    logoUrl?: string;
+    location: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
 }
 
 export interface AuthResponse {

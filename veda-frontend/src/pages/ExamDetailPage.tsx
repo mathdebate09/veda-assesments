@@ -226,33 +226,33 @@ export default function ExamDetailPage() {
         />
 
         {/* Content Body */}
-        <main className="mx-auto flex w-full max-w-245 flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
+        <main className="mx-auto flex w-full max-w-245 flex-1 flex-col items-center justify-center px-3 py-4 sm:px-8 sm:py-8 lg:px-10">
           {/* Header Title */}
           <div className="mb-1 text-center">
-            <h1 className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[28px] font-bold leading-tight tracking-[-0.04em] text-[#252525] sm:text-[34px]">
+            <h1 className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[22px] font-bold leading-tight tracking-[-0.04em] text-[#252525] sm:text-[34px]">
               <span>Upload</span>
-              <span className="inline-block rounded-[7px] bg-[#ffe3da] px-2.5 py-0.5 font-bold text-[#ff5623] sm:px-3">
+              <span className="inline-block rounded-[7px] bg-[#ffe3da] px-2 py-0.5 text-[22px] font-bold text-[#ff5623] sm:px-3 sm:text-[34px]">
                 Question Paper & Answer Sheets
               </span>
             </h1>
-            <p className="mt-2 text-[14px] text-[#6f6c6a] sm:text-[15px]">
+            <p className="mt-1.5 text-[12px] text-[#6f6c6a] sm:mt-2 sm:text-[15px]">
               Upload both files to get started
             </p>
           </div>
 
           {/* Central Graphic */}
-          <div className="my-4 flex justify-center sm:my-5">
+          <div className="my-2 flex justify-center sm:my-5">
             <img
               src={mappingGraphic}
               alt="Teacher Illustration"
-              className="h-28 w-28 select-none object-contain drop-shadow-[0_7px_10px_rgba(255,86,35,0.08)] pointer-events-none sm:h-32 sm:w-32"
+              className="h-24 w-24 select-none object-contain drop-shadow-[0_7px_10px_rgba(255,86,35,0.08)] pointer-events-none sm:h-32 sm:w-32"
             />
           </div>
 
           {/* Upload Cards Box */}
-          <div className="flex w-full flex-col gap-4 rounded-[18px] border border-white/90 bg-white/65 p-4 shadow-[0_10px_28px_rgba(37,37,37,0.045)] backdrop-blur-md sm:p-5">
+          <div className="flex w-full flex-col gap-3 rounded-[16px] border border-white/90 bg-white/65 p-3 shadow-[0_10px_28px_rgba(37,37,37,0.045)] backdrop-blur-md sm:gap-4 sm:rounded-[18px] sm:p-5">
             {/* Two Side-by-Side Upload Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               {/* Question Paper Card */}
               <UploadCard
                 label="Question Paper"
@@ -279,9 +279,9 @@ export default function ExamDetailPage() {
             </div>
 
             {/* Student Info Inputs */}
-            <div className="grid grid-cols-1 gap-4 border-t border-[#ece8e6] pt-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 border-t border-[#ece8e6] pt-3 sm:grid-cols-2 sm:gap-4 sm:pt-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#5e5a58]">
+                <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5e5a58] sm:text-[11px]">
                   Serial Number <span className="text-[#FF5623]">*</span>
                 </label>
                 <input
@@ -289,12 +289,12 @@ export default function ExamDetailPage() {
                   value={serialNo}
                   onChange={(e) => setSerialNo(e.target.value)}
                   placeholder="e.g. 001, 10B-01"
-                  className="h-11 rounded-[9px] border border-[#d9d5d2] bg-white px-3.5 text-[14px] text-[#252525] outline-none transition-all placeholder:text-[#aaa5a1] focus:border-[#ff5623] focus:ring-2 focus:ring-[#ff5623]/10"
+                  className="h-10 rounded-[9px] border border-[#d9d5d2] bg-white px-3 text-[13px] text-[#252525] outline-none transition-all placeholder:text-[#aaa5a1] focus:border-[#ff5623] focus:ring-2 focus:ring-[#ff5623]/10 sm:h-11 sm:px-3.5 sm:text-[14px]"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#5e5a58]">
+                <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5e5a58] sm:text-[11px]">
                   Student Name <span className="text-[#9b9b9b] font-normal normal-case">(Optional)</span>
                 </label>
                 <input
@@ -302,7 +302,7 @@ export default function ExamDetailPage() {
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder="e.g. Rahul Sharma"
-                  className="h-11 rounded-[9px] border border-[#d9d5d2] bg-white px-3.5 text-[14px] text-[#252525] outline-none transition-all placeholder:text-[#aaa5a1] focus:border-[#ff5623] focus:ring-2 focus:ring-[#ff5623]/10"
+                  className="h-10 rounded-[9px] border border-[#d9d5d2] bg-white px-3 text-[13px] text-[#252525] outline-none transition-all placeholder:text-[#aaa5a1] focus:border-[#ff5623] focus:ring-2 focus:ring-[#ff5623]/10 sm:h-11 sm:px-3.5 sm:text-[14px]"
                 />
               </div>
             </div>
@@ -310,17 +310,17 @@ export default function ExamDetailPage() {
           </div>
 
           {submitError && (
-            <div className="mt-4 w-full rounded-[9px] border border-[#f2cfc5] bg-[#fff5f1] px-4 py-3 text-[13px] text-red-600">
+            <div className="mt-3 w-full rounded-[9px] border border-[#f2cfc5] bg-[#fff5f1] px-4 py-3 text-[12px] text-red-600 sm:mt-4 sm:text-[13px]">
               {submitError}
             </div>
           )}
 
           {/* Action CTA */}
-          <div className="flex flex-col items-center gap-2 pt-5">
+          <div className="flex flex-col items-center gap-2 pt-4 sm:pt-5">
             <button
               onClick={handleStartMapping}
               disabled={!canStart}
-              className="flex items-center gap-2.5 rounded-full bg-[#303030] px-7 py-3 text-[14px] font-semibold text-white shadow-[0_5px_12px_rgba(48,48,48,0.18)] transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
+              className="flex items-center gap-2 rounded-full bg-[#303030] px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_5px_12px_rgba(48,48,48,0.18)] transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 sm:gap-2.5 sm:px-7 sm:py-3 sm:text-[14px]"
             >
               {submitting ? (
                 <>
@@ -337,7 +337,7 @@ export default function ExamDetailPage() {
               )}
             </button>
 
-            <p className="text-center text-[12px] text-[#8c8885]">
+            <p className="max-w-[28rem] text-center text-[11px] text-[#8c8885] sm:text-[12px]">
               Once both files are uploaded, you'll be able to map answers with questions
             </p>
           </div>
@@ -397,7 +397,7 @@ function UploadCard({
       onClick={() => {
         if (!file) inputRef.current?.click();
       }}
-      className={`relative flex min-h-34 flex-col items-center justify-center rounded-[14px] border-2 border-dashed p-4 transition-all ${dragging
+      className={`relative flex min-h-[118px] flex-col items-center justify-center rounded-[14px] border-2 border-dashed p-3 transition-all sm:min-h-34 sm:p-4 ${dragging
         ? "scale-[1.01] border-[#ff5623] bg-[rgba(255,86,35,0.06)]"
         : error
           ? "border-red-300 bg-[#fff7f5]"
@@ -457,18 +457,18 @@ function UploadCard({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-2.5 text-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[9px] bg-[#f1f0ef] text-[#3f3b39]">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <div className="flex flex-col items-center gap-2 text-center sm:gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#f1f0ef] text-[#3f3b39] sm:h-10 sm:w-10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="sm:h-[22px] sm:w-[22px]">
               <path d="M12 15V4M12 4L8 8M12 4L16 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M4 14V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
           <div>
-            <p className="text-[14px] font-semibold text-[#252525]">
+            <p className="text-[13px] font-semibold text-[#252525] sm:text-[14px]">
               Upload <span className="text-[#FF5623]">{label}</span>
             </p>
-            <p className="mt-0.5 text-[11px] text-[#8c8885]">{hint}</p>
+            <p className="mt-0.5 text-[10px] text-[#8c8885] sm:text-[11px]">{hint}</p>
           </div>
         </div>
       )}
