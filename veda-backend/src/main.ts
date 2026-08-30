@@ -22,7 +22,10 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(new ResponseTransformInterceptor());
 
-  app.enableCors();
+  app.enableCors({
+    origin: ['https://veda-assesments.jayowiee.com','http://localhost:8443'],
+    credentials: true,
+  });
   app.setGlobalPrefix('api/v1');
 
   const configService = app.get(ConfigService);
