@@ -38,12 +38,6 @@ async function bootstrap() {
         return;
       }
 
-      const isJayowieeSubdomain = /^https?:\/\/.*\.jayowiee\.com$/.test(origin);
-      if (isJayowieeSubdomain) {
-        callback(null, true);
-        return;
-      }
-
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
