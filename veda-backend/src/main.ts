@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
@@ -23,15 +24,35 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseTransformInterceptor());
 
   app.enableCors({
-    origin: [
-      'https://veda-assesments.jayowiee.com',
-      'http://localhost:8443',
-      'https://api.va.jayowiee.com',
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'https://veda-assesments.jayowiee.com',
+        'https://www.veda-assesments.jayowiee.com',
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:8443',
+      ];
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      const isJayowieeSubdomain = /^https?:\/\/.*\.jayowiee\.com$/.test(origin);
+      if (isJayowieeSubdomain) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
   app.setGlobalPrefix('api/v1');
 
   const configService = app.get(ConfigService);

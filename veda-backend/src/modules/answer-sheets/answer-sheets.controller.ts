@@ -35,7 +35,9 @@ export class AnswerSheetsController {
     AnyFilesInterceptor({
       storage: memoryStorage(),
       limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB max
+        fileSize: 25 * 1024 * 1024, // 25MB per uploaded file
+        files: 50,
+        parts: 50,
       },
     }),
   )
