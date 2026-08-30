@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useMemo } from "react";
 
-const vedaLogo = "/vedaai.png";
+const vedaLogo = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/logo.png";
 
 const TOTAL_GRADES = 12;
 const DEFAULT_SECTIONS = 5;
@@ -240,7 +240,7 @@ export default function CalculatorPage() {
                                 className="mt-4 flex items-center justify-center gap-1.5 rounded-full bg-[#1a1a1a] py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#303030]"
                             >
                                 Start grading
-                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
                             </Link>
                         </div>
                     </div>

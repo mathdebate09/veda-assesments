@@ -2,7 +2,7 @@
 import { useSidebar } from "@/context/SidebarContext";
 import sparkleIcon from "@/assets/sidebar/sparkle.svg";
 
-const vedaLogo = "/vedaai.png";
+const vedaLogo = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/logo.png";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { isAuthenticated } from "@/lib/auth";
 
-const vedaLogo = "/vedaai.png";
+const vedaLogo = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/logo.png";
 
 const products = [
     { num: "01", title: "AI Exam Grader", text: "Grade subjective and objective exams with AI accuracy. Teachers stay in full control." },

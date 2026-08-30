@@ -4,7 +4,7 @@ import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 import { useSidebar } from "@/context/SidebarContext";
 
-const vedaLogo = "/vedaai.png";
+const vedaLogo = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/logo.png";
 
 export default function LoginPage() {
   const navigate = useNavigate();
