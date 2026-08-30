@@ -13,8 +13,9 @@ import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
 
+import sparkleLoader from "@/assets/graphics/sparkle-loader.webm";
+
 const mappingGraphic = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/mapping.png";
-const sparkleLoader = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/sparkle-loader.webm";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 const MAX_BYTES = 25 * 1024 * 1024;
