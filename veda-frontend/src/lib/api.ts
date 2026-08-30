@@ -257,6 +257,41 @@ export function assignRegion(
   );
 }
 
+// ── Assessment ────────────────────────────────────────────────────────────────
+
+export interface LearningGapItem {
+  topic: string;
+  gapPercent: number;
+}
+
+export interface StudentSegmentation {
+  A: number;
+  B: number;
+  C: number;
+  D: number;
+}
+
+export interface ExamAssessment {
+  examId: string;
+  examTitle: string;
+  subject: string;
+  totalMarks: number;
+  submissionCount: number;
+  totalStudents: number;
+  averageScore: number;
+  topScore: number;
+  classMedian: number;
+  lowestScore: number;
+  segmentation: StudentSegmentation;
+  learningGaps: LearningGapItem[];
+  teacherInsights: string[];
+}
+
+export function getExamAssessment(examId: string) {
+  return request<ExamAssessment>(`/exams/${examId}/assessment`);
+}
+
+
 // ── Classrooms ────────────────────────────────────────────────────────────────
 
 export interface Classroom {

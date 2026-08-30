@@ -33,10 +33,22 @@ export interface EvaluationConfig {
   prompts: EvaluationPromptConfig;
 }
 
+export interface AssessmentPromptConfig {
+  analyzeAssessment: string;
+}
+
+export interface AssessmentConfig {
+  model: string;
+  maxTokens: number;
+  temperature: number;
+  prompts: AssessmentPromptConfig;
+}
+
 export interface AiConfig {
   vision: VisionConfig;
   grading: GradingConfig;
   evaluation: EvaluationConfig;
+  assessment: AssessmentConfig;
 }
 
 export const getAiConfig = (): AiConfig => ({
@@ -146,4 +158,35 @@ JSON shape: {
 }`,
     },
   },
+  assessment: {
+    model: 'deepseek-v4-flash',
+    maxTokens: parseInt(process.env.ASSESSMENT_MAX_TOKENS || '40000', 10),
+    temperature: parseFloat(process.env.ASSESSMENT_TEMPERATURE || '0.3'),
+    prompts: {
+      analyzeAssessment: `You are an expert pedagogical AI specializing in real-time exam learning analytics.
+Analyze the provided exam title, subject, questions, student answer performance, and common mistakes.
+Generate a tailored Learning Gap Analysis and specific, actionable Insights for Teachers.
+
+Return ONLY valid JSON. No markdown fences, no explanatory text.
+JSON shape:
+{
+  "learningGaps": [
+    {
+      "topic": string,
+      "gapPercent": number
+    }
+  ],
+  "teacherInsights": [
+    string
+  ]
+}
+
+Rules:
+- Base all topics and concepts directly on the actual subject and questions in this exam.
+- "learningGaps": Return 4 to 6 core concept topics where students lost marks or showed misconceptions. "gapPercent" should be an integer between 5 and 50 representing estimated cohort error frequency. Sort descending by gapPercent.
+- "teacherInsights": Return 4 to 6 highly actionable, pedagogical recommendations, referring to specific student names or concepts from the exam when available.`,
+    },
+  },
 });
+
+

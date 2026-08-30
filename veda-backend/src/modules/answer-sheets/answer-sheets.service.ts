@@ -233,6 +233,10 @@ export class AnswerSheetsService {
       uploadedAt: new Date(),
     });
 
+    await this.examsRepository.update(examId, {
+      assessmentCache: undefined,
+    });
+
     // 7. Generate legacy AnswerRegions for backwards-compatible API consumers
     const regionsData = this.buildLegacyRegionsData(
       answerSheet._id as Types.ObjectId,
@@ -336,6 +340,9 @@ export class AnswerSheetsService {
 
     // Also update/sync legacy QuestionGrade & ExamSummary documents for backwards compatibility
     await this.answerSheetsRepository.deleteGradesBySheetId(sheetId);
+    await this.examsRepository.update(examId, {
+      assessmentCache: undefined,
+    });
     const legacyQMap = new Map(legacyQuestions.map((q) => [q.displayId.toLowerCase(), q]));
     const regions = await this.answerSheetsRepository.findRegionsBySheetId(sheetId);
     const regionMap = new Map(
@@ -517,6 +524,9 @@ export class AnswerSheetsService {
         grading: sheet.grading,
         totalScore,
       });
+      await this.examsRepository.update(_examId, {
+        assessmentCache: undefined,
+      });
     }
 
     // Also update legacy QuestionGrade if present
@@ -598,4 +608,160 @@ export class AnswerSheetsService {
   async getAnswerSheetsForExam(examId: string) {
     return this.answerSheetsRepository.findSheetsByExam(examId);
   }
+
+  async getExamAssessment(examId: string) {
+    const exam = await this.examsRepository.findById(examId);
+    if (!exam) {
+      throw new NotFoundException(`Exam with ID ${examId} not found.`);
+    }
+
+    const legacyQuestions = await this.questionsService.getQuestionsByExam(examId);
+    const questionsList = this.buildQuestionsList(exam, legacyQuestions);
+    const sheets = await this.answerSheetsRepository.findSheetsByExam(examId);
+
+    const totalMarks =
+      exam.totalMarks ||
+      questionsList.reduce((sum, q) => sum + (q.maxMarks || 0), 0) ||
+      100;
+    const submissionCount = sheets.length;
+    const classroomStudents = (exam.classroom as any)?.students?.length;
+    const totalStudents = classroomStudents && classroomStudents > 0
+      ? classroomStudents
+      : submissionCount > 0
+        ? submissionCount
+        : 0;
+
+    const scores: number[] = [];
+    const percentages: number[] = [];
+    const segmentation = {
+      A: 0,
+      B: 0,
+      C: 0,
+      D: 0,
+    };
+
+    const studentPerformances: Array<{
+      studentName: string;
+      percentage: number;
+      strengths?: string[];
+      improvements?: string[];
+      grades?: Record<string, { marksAwarded: number; maxMarks: number; aiFeedback?: string }>;
+    }> = [];
+
+    for (const sheet of sheets) {
+      let sheetScore = sheet.totalScore;
+      let sheetPercentage: number | null = null;
+
+      if (sheet.grading?.summary?.percentage !== undefined) {
+        sheetPercentage = sheet.grading.summary.percentage;
+        sheetScore = sheet.grading.summary.totalScore;
+      } else if (sheetScore !== undefined && totalMarks > 0) {
+        sheetPercentage = Math.round((sheetScore / totalMarks) * 100);
+      }
+
+      if (sheetPercentage !== null && sheetScore !== undefined) {
+        scores.push(sheetScore);
+        percentages.push(sheetPercentage);
+
+        if (sheetPercentage >= 80) {
+          segmentation.A++;
+        } else if (sheetPercentage >= 60) {
+          segmentation.B++;
+        } else if (sheetPercentage >= 40) {
+          segmentation.C++;
+        } else {
+          segmentation.D++;
+        }
+
+        const student = (sheet as any).student;
+        studentPerformances.push({
+          studentName:
+            student?.name ||
+            `Student #${student?.rollNo || sheet._id.toString().slice(-4)}`,
+          percentage: sheetPercentage,
+          strengths: sheet.grading?.summary?.strengths,
+          improvements: sheet.grading?.summary?.improvements,
+        });
+      }
+    }
+
+    let averageScore = 0;
+    let topScore = 0;
+    let lowestScore = 0;
+    let classMedian = 0;
+
+    if (percentages.length > 0) {
+      averageScore = Math.round(
+        percentages.reduce((a, b) => a + b, 0) / percentages.length,
+      );
+      topScore = Math.round(Math.max(...percentages));
+      lowestScore = Math.round(Math.min(...percentages));
+
+      const sortedScores = [...scores].sort((a, b) => a - b);
+      const mid = Math.floor(sortedScores.length / 2);
+      classMedian =
+        sortedScores.length % 2 !== 0
+          ? sortedScores[mid]
+          : Math.round(
+              ((sortedScores[mid - 1] + sortedScores[mid]) / 2) * 10,
+            ) / 10;
+    }
+
+    const cachedAssessment = exam.assessmentCache;
+    if (
+      cachedAssessment &&
+      cachedAssessment.submissionCount === submissionCount &&
+      Array.isArray(cachedAssessment.learningGaps) &&
+      Array.isArray(cachedAssessment.teacherInsights)
+    ) {
+      return {
+        examId: exam._id.toString(),
+        examTitle: exam.title,
+        subject: exam.subject || '',
+        totalMarks,
+        submissionCount,
+        totalStudents,
+        averageScore,
+        topScore,
+        classMedian,
+        lowestScore,
+        segmentation,
+        learningGaps: cachedAssessment.learningGaps,
+        teacherInsights: cachedAssessment.teacherInsights,
+      };
+    }
+
+    const aiAnalytics = await this.gradingService.generateAssessmentAnalytics(
+      exam.title,
+      exam.subject || '',
+      questionsList,
+      studentPerformances,
+    );
+
+    await this.examsRepository.update(examId, {
+      assessmentCache: {
+        submissionCount,
+        learningGaps: aiAnalytics.learningGaps,
+        teacherInsights: aiAnalytics.teacherInsights,
+        generatedAt: new Date(),
+      },
+    });
+
+    return {
+      examId: exam._id.toString(),
+      examTitle: exam.title,
+      subject: exam.subject || '',
+      totalMarks,
+      submissionCount,
+      totalStudents,
+      averageScore,
+      topScore,
+      classMedian,
+      lowestScore,
+      segmentation,
+      learningGaps: aiAnalytics.learningGaps,
+      teacherInsights: aiAnalytics.teacherInsights,
+    };
+  }
 }
+

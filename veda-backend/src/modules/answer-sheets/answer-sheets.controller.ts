@@ -56,6 +56,11 @@ export class AnswerSheetsController {
     return this.answerSheetsService.gradeAnswerSheet(examId, id);
   }
 
+  @Get('assessment')
+  async getAssessment(@Param('examId') examId: string) {
+    return this.answerSheetsService.getExamAssessment(examId);
+  }
+
   @Get(':id')
   async getAnswerSheetDetails(
     @Param('examId') examId: string,
@@ -94,3 +99,15 @@ export class AnswerSheetsController {
     );
   }
 }
+
+@Controller('exams/:examId/assessment')
+@UseGuards(JwtAuthGuard)
+export class AssessmentController {
+  constructor(private readonly answerSheetsService: AnswerSheetsService) {}
+
+  @Get()
+  async getAssessment(@Param('examId') examId: string) {
+    return this.answerSheetsService.getExamAssessment(examId);
+  }
+}
+

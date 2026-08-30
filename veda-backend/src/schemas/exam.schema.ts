@@ -78,6 +78,24 @@ export class QuestionItem {
 export const QuestionItemSchema =
   SchemaFactory.createForClass(QuestionItem);
 
+@Schema({ _id: false })
+export class AssessmentCacheItem {
+  @Prop({ required: true, default: 0 })
+  submissionCount: number;
+
+  @Prop({ type: [Object], default: [] })
+  learningGaps: Array<{ topic: string; gapPercent: number }>;
+
+  @Prop({ type: [String], default: [] })
+  teacherInsights: string[];
+
+  @Prop({ default: Date.now })
+  generatedAt: Date;
+}
+
+export const AssessmentCacheItemSchema =
+  SchemaFactory.createForClass(AssessmentCacheItem);
+
 @Schema()
 export class Exam {
   @Prop({ required: true, trim: true })
@@ -112,6 +130,9 @@ export class Exam {
 
   @Prop({ type: Object, default: {} })
   questions: Record<string, QuestionItem>;
+
+  @Prop({ type: AssessmentCacheItemSchema, required: false })
+  assessmentCache?: AssessmentCacheItem;
 
   @Prop({ default: Date.now })
   createdAt: Date;

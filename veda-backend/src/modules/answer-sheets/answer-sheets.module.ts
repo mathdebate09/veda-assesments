@@ -18,7 +18,7 @@ import {
 } from '../../schemas/exam-summary.schema';
 import { AnswerSheetsRepository } from './answer-sheets.repository';
 import { AnswerSheetsService } from './answer-sheets.service';
-import { AnswerSheetsController } from './answer-sheets.controller';
+import { AnswerSheetsController, AssessmentController } from './answer-sheets.controller';
 import { StorageModule } from '../storage/storage.module';
 import { ExtractionModule } from '../extraction/extraction.module';
 import { GradingModule } from '../grading/grading.module';
@@ -41,7 +41,7 @@ import { StudentsModule } from '../students/students.module';
     ExamsModule,
     StudentsModule,
   ],
-  controllers: [AnswerSheetsController],
+  controllers: [AnswerSheetsController, AssessmentController],
   providers: [AnswerSheetsRepository, AnswerSheetsService],
   exports: [AnswerSheetsRepository, AnswerSheetsService],
 })
