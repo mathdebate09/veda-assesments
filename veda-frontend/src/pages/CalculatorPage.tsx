@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useMemo } from "react";
-import vedaLogo from "@/assets/logos/vedaai.png";
+
+const vedaLogo = "/vedaai.png";
 
 const TOTAL_GRADES = 12;
 const DEFAULT_SECTIONS = 5;

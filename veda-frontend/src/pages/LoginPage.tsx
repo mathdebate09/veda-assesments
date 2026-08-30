@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 import { useSidebar } from "@/context/SidebarContext";
-import vedaLogo from "@/assets/logos/vedaai.png";
+
+const vedaLogo = "/vedaai.png";
 
 export default function LoginPage() {
   const navigate = useNavigate();

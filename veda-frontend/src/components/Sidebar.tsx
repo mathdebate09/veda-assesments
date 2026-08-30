@@ -1,7 +1,8 @@
 ﻿import { NavLink } from "react-router-dom";
 import { useSidebar } from "@/context/SidebarContext";
-import vedaLogo from "@/assets/logos/vedaai.png";
 import sparkleIcon from "@/assets/sidebar/sparkle.svg";
+
+const vedaLogo = "/vedaai.png";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 

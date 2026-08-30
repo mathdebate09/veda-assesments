@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { isAuthenticated } from "@/lib/auth";
-import vedaLogo from "@/assets/logos/vedaai.png";
+
+const vedaLogo = "/vedaai.png";
 
 const products = [
     { num: "01", title: "AI Exam Grader", text: "Grade subjective and objective exams with AI accuracy. Teachers stay in full control." },
