@@ -23,8 +23,14 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseTransformInterceptor());
 
   app.enableCors({
-    origin: ['https://veda-assesments.jayowiee.com','http://localhost:8443'],
+    origin: [
+      'https://veda-assesments.jayowiee.com',
+      'http://localhost:8443',
+      'https://api.va.jayowiee.com',
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
   app.setGlobalPrefix('api/v1');
 

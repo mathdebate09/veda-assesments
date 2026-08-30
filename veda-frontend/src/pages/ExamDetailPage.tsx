@@ -9,11 +9,12 @@ import {
   type AnswerSheet,
 } from "@/lib/api";
 import { convertFileToPngList } from "@/lib/pdfToImages";
-import mappingGraphic from "@/assets/graphics/mapping.png";
-import sparkleLoader from "@/assets/graphics/sparkle-loader.webm";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
+
+const mappingGraphic = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/mapping.png";
+const sparkleLoader = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/mapping.png";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 const MAX_BYTES = 25 * 1024 * 1024;
