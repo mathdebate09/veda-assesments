@@ -13,9 +13,9 @@ import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import { useSidebar } from "@/context/SidebarContext";
 
-import sparkleLoader from "@/assets/graphics/sparkle-loader.webm";
 
 const mappingGraphic = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/mapping.png";
+const sparkleLoader = "https://ik.imagekit.io/jayowiee/assessments/veda-ai/sparkle-loader.gif";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -212,12 +212,9 @@ export default function ExamDetailPage() {
 
           <main className="flex flex-1 items-center justify-center bg-[#f3f2f1]">
             <div className="flex flex-col items-center gap-5">
-              <video
+              <img
                 src={sparkleLoader}
-                autoPlay
-                loop
-                muted
-                playsInline
+                alt="Loading"
                 className="h-28 w-28 object-contain drop-shadow-[0_10px_24px_rgba(255,86,35,0.18)]"
               />
               <div className="text-center">
