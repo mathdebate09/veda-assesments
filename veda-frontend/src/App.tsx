@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
+import CalculatorPage from "@/pages/CalculatorPage";
 import HomePage from "@/pages/HomePage";
 import ExamsListPage from "@/pages/ExamsListPage";
 import ExamDetailPage from "@/pages/ExamDetailPage";
@@ -20,6 +21,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<LandingPage />} />
+          <Route path="/calculator" element={<CalculatorPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<HomePage />} />
