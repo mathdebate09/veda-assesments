@@ -175,21 +175,13 @@ export class AnswerSheetsService {
       pageBuffers = files.map((f) => f.buffer);
     }
 
-    // 3. Upload rasterised page images to Azure inside folder: exams/{examId}/answer-sheets/{studentId}/page_N.png
-    const pageImages: string[] = [];
-    for (let i = 0; i < pageBuffers.length; i++) {
-      const pageBlobPath = this.storageService.getAnswerSheetPath(
-        examId,
-        studentId,
-        i + 1,
-      );
-      const url = await this.storageService.uploadFile(
-        pageBuffers[i],
-        pageBlobPath,
-        'image/png',
-      );
-      pageImages.push(url);
-    }
+    // 3. Upload rasterised page images to Azure concurrently inside folder: exams/{examId}/answer-sheets/{studentId}/page_N.png
+    const pageUploadItems = pageBuffers.map((buf, i) => ({
+      buffer: buf,
+      filename: this.storageService.getAnswerSheetPath(examId, studentId, i + 1),
+      mimetype: 'image/png',
+    }));
+    const pageImages = await this.storageService.uploadFilesConcurrently(pageUploadItems);
 
     const fileUrl = originalDocUrl || pageImages[0] || '';
 

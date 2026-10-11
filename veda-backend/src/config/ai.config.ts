@@ -53,7 +53,7 @@ export interface AiConfig {
 
 export const getAiConfig = (): AiConfig => ({
   vision: {
-    model: 'deepseek-v4-flash-vision-exp',
+    model: 'deepseek-flash',
     questionMaxTokens: parseInt(process.env.VISION_QUESTION_MAX_TOKENS || '20000', 10),
     answerMaxTokens: parseInt(process.env.VISION_ANSWER_MAX_TOKENS || '80000', 10),
     temperature: parseFloat(process.env.VISION_TEMPERATURE || '0.1'),
@@ -130,7 +130,7 @@ Rules:
     },
   },
   grading: {
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     maxTokens: parseInt(process.env.GRADING_MAX_TOKENS || '50000', 10),
     temperature: parseFloat(process.env.GRADING_TEMPERATURE || '0.1'),
     prompts: {
@@ -145,7 +145,7 @@ aiFeedback should be 2-3 sentences: what was correct, what was missing.`,
     },
   },
   evaluation: {
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     maxTokens: parseInt(process.env.SUMMARY_MAX_TOKENS || '30000', 10),
     temperature: parseFloat(process.env.SUMMARY_TEMPERATURE || '0.3'),
     prompts: {
@@ -159,7 +159,7 @@ JSON shape: {
     },
   },
   assessment: {
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     maxTokens: parseInt(process.env.ASSESSMENT_MAX_TOKENS || '40000', 10),
     temperature: parseFloat(process.env.ASSESSMENT_TEMPERATURE || '0.3'),
     prompts: {

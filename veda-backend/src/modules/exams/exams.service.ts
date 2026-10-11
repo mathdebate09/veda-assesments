@@ -120,20 +120,13 @@ export class ExamsService {
       pageBuffers = files.map((f) => f.buffer);
     }
 
-    // 1. Upload rasterised page images to Azure inside folder: exams/{examId}/question-paper/page_N.png
-    const questionPaperPageImages: string[] = [];
-    for (let i = 0; i < pageBuffers.length; i++) {
-      const pageBlobPath = this.storageService.getQuestionPaperPath(
-        examId,
-        i + 1,
-      );
-      const url = await this.storageService.uploadFile(
-        pageBuffers[i],
-        pageBlobPath,
-        'image/png',
-      );
-      questionPaperPageImages.push(url);
-    }
+    // 1. Upload rasterised page images to Azure concurrently inside folder: exams/{examId}/question-paper/page_N.png
+    const pageUploadItems = pageBuffers.map((buf, i) => ({
+      buffer: buf,
+      filename: this.storageService.getQuestionPaperPath(examId, i + 1),
+      mimetype: 'image/png',
+    }));
+    const questionPaperPageImages = await this.storageService.uploadFilesConcurrently(pageUploadItems);
 
     const questionPaperUrl =
       originalDocUrl || questionPaperPageImages[0] || '';

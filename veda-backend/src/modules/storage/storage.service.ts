@@ -156,6 +156,36 @@ export class StorageService {
     }
   }
 
+  /**
+   * Upload multiple files concurrently with bounded concurrency to maximize I/O throughput
+   * while avoiding socket exhaustion or payload bursts.
+   */
+  async uploadFilesConcurrently(
+    items: Array<{ buffer: Buffer; filename: string; mimetype: string }>,
+    concurrency = 6,
+  ): Promise<string[]> {
+    if (!items || items.length === 0) return [];
+    const results: string[] = new Array(items.length);
+    let currentIndex = 0;
+
+    const worker = async () => {
+      while (currentIndex < items.length) {
+        const index = currentIndex++;
+        const item = items[index];
+        results[index] = await this.uploadFile(
+          item.buffer,
+          item.filename,
+          item.mimetype,
+        );
+      }
+    };
+
+    const workerCount = Math.min(items.length, concurrency);
+    const workers = Array.from({ length: workerCount }, () => worker());
+    await Promise.all(workers);
+    return results;
+  }
+
   async rasterisePdfToBuffers(
     buffer: Buffer,
     mimetype: string = 'application/pdf',
@@ -208,20 +238,13 @@ export class StorageService {
 
     try {
       const pageBuffers = await this.rasterisePdfToBuffers(buffer, mimetype);
-      const uploadedUrls: string[] = [];
+      const itemsToUpload = pageBuffers.map((pageBuffer, i) => ({
+        buffer: pageBuffer,
+        filename: `${prefix}_page_${i + 1}_${Date.now()}_${uuidv4()}.png`,
+        mimetype: 'image/png',
+      }));
 
-      for (let i = 0; i < pageBuffers.length; i++) {
-        const pageBuffer = pageBuffers[i];
-        const pageFilename = `${prefix}_page_${i + 1}_${Date.now()}_${uuidv4()}.png`;
-        const url = await this.uploadFile(
-          pageBuffer,
-          pageFilename,
-          'image/png',
-        );
-        uploadedUrls.push(url);
-      }
-
-      return uploadedUrls;
+      return await this.uploadFilesConcurrently(itemsToUpload);
     } catch (error: any) {
       this.logger.error(
         `Failed to rasterise and upload PDF pages: ${error.message}`,

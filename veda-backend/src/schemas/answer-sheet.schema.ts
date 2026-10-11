@@ -10,6 +10,7 @@ export enum AnswerSheetStatus {
   PROCESSING = 'processing',
   MAPPED = 'mapped',
   GRADED = 'graded',
+  FAILED = 'failed',
 }
 
 @Schema({ _id: false })
@@ -166,6 +167,9 @@ export class AnswerSheet {
 
   @Prop({ required: false })
   totalScore?: number;
+
+  @Prop({ required: false })
+  processingError?: string;
 
   @Prop({ default: Date.now })
   uploadedAt: Date;

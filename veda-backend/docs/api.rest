@@ -22,8 +22,8 @@ Content-Type: {{contentType}}
 
 {
   "name": "Madhur Hastogi",
-  "email": "madhur.hastogi@dps.edu",
-  "password": "Password@123",
+  "email": "madhur.rastogi@dps.edu",
+  "password": "Password@2748",
   "instituteName": "Delhi Public School",
   "instituteLocation": "Bokaro Steel City",
   "instituteLogoUrl": "https://ik.imagekit.io/jayowiee/assessments/veda-ai/dps.png?updatedAt=1787832754753"

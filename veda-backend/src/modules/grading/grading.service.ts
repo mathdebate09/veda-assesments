@@ -272,48 +272,65 @@ ${grades
     let totalScore = 0;
     let maxScore = 0;
 
-    for (const [key, q] of Object.entries(questions)) {
-      const displayId = q.displayId || key;
-      const maxMarks = q.maxMarks && q.maxMarks > 0 ? q.maxMarks : 5;
-      maxScore += maxMarks;
+    const questionEntries = Object.entries(questions);
 
-      const ans = answers[displayId] || answers[key];
-      const hasAnswer = Boolean(ans && ans.text && ans.text.trim());
+    // Concurrently evaluate all questions against LLM with controlled concurrency
+    const gradeEvaluations = await Promise.all(
+      questionEntries.map(async ([key, q]) => {
+        const displayId = q.displayId || key;
+        const maxMarks = q.maxMarks && q.maxMarks > 0 ? q.maxMarks : 5;
+        const ans = answers[displayId] || answers[key];
+        const hasAnswer = Boolean(ans && ans.text && ans.text.trim());
 
-      if (hasAnswer) {
-        const gradeRes = await this.gradeAnswer(
-          { text: q.text, maxMarks },
-          ans.text.trim(),
-        );
-        grades[displayId] = {
-          marksAwarded: gradeRes.marksAwarded,
-          maxMarks,
-          isCorrect: gradeRes.isCorrect,
-          aiFeedback: gradeRes.aiFeedback,
-          teacherOverride: null,
-        };
-        totalScore += gradeRes.marksAwarded;
-        summaryInput.push({
-          questionText: q.text,
-          marksAwarded: gradeRes.marksAwarded,
-          maxMarks,
-          aiFeedback: gradeRes.aiFeedback,
-        });
-      } else {
-        grades[displayId] = {
-          marksAwarded: 0,
-          maxMarks,
-          isCorrect: false,
-          aiFeedback: 'Not attempted.',
-          teacherOverride: null,
-        };
-        summaryInput.push({
-          questionText: q.text,
-          marksAwarded: 0,
-          maxMarks,
-          aiFeedback: 'Not attempted.',
-        });
-      }
+        if (hasAnswer) {
+          const gradeRes = await this.gradeAnswer(
+            { text: q.text, maxMarks },
+            ans.text.trim(),
+          );
+          return {
+            displayId,
+            gradeItem: {
+              marksAwarded: gradeRes.marksAwarded,
+              maxMarks,
+              isCorrect: gradeRes.isCorrect,
+              aiFeedback: gradeRes.aiFeedback,
+              teacherOverride: null,
+            },
+            summaryItem: {
+              questionText: q.text,
+              marksAwarded: gradeRes.marksAwarded,
+              maxMarks,
+              aiFeedback: gradeRes.aiFeedback,
+            },
+            maxMarks,
+          };
+        } else {
+          return {
+            displayId,
+            gradeItem: {
+              marksAwarded: 0,
+              maxMarks,
+              isCorrect: false,
+              aiFeedback: 'Not attempted.',
+              teacherOverride: null,
+            },
+            summaryItem: {
+              questionText: q.text,
+              marksAwarded: 0,
+              maxMarks,
+              aiFeedback: 'Not attempted.',
+            },
+            maxMarks,
+          };
+        }
+      }),
+    );
+
+    for (const evaluation of gradeEvaluations) {
+      grades[evaluation.displayId] = evaluation.gradeItem;
+      summaryInput.push(evaluation.summaryItem);
+      maxScore += evaluation.maxMarks;
+      totalScore += evaluation.gradeItem.marksAwarded;
     }
 
     const percentage =
@@ -383,7 +400,7 @@ ${sSummary || (studentPerformances.length === 0 ? 'No submissions graded yet. Ge
 
 Please generate the real-time class-wide learning gaps and teacher insights for this exam.`;
 
-    const modelName = this.assessmentConfig?.model || process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+    const modelName = this.assessmentConfig?.model || process.env.DEEPSEEK_MODEL || 'deepseek-flash';
 
     try {
       this.logger.log(`[DeepSeek Assessment] Calling ${modelName} for exam "${examTitle}"...`);

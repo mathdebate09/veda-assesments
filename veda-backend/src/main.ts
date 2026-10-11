@@ -28,12 +28,17 @@ async function bootstrap() {
       const allowedOrigins = [
         'https://veda-assesments.jayowiee.com',
         'https://www.veda-assesments.jayowiee.com',
+        'https://va.jayowiee.com',
         'http://localhost:3000',
         'http://localhost:5173',
         'http://localhost:8443',
       ];
 
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
         callback(null, true);
         return;
       }
@@ -50,9 +55,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('port') || 3000;
+  const port = Number(process.env.PORT) || configService.get<number>('port') || 3000;
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`VedaAI Backend is running on port ${port} with prefix api/v1`);
 }
 
